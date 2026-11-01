@@ -133,7 +133,7 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
   }
 
   // the computer's speakers from your phone, behind the computer switch (no PIN: it only talks and presses media keys)
-  const MUSIC = { play: 'play', pause: 'pause', next: 'next', prev: 'previous', previous: 'previous', volup: 'volup', voldown: 'voldown', mute: 'mute' };
+  const MUSIC = { play: 'play', pause: 'pause', next: 'next', prev: 'previous', volup: 'volup', voldown: 'voldown', mute: 'mute' };
   async function computerSpeakers(chatId, text) {
     if (!settings().switches.control) return telegram.send(chatId, 'คำสั่งนี้ปิดอยู่ เปิดได้ที่ ตั้งค่า › Telegram บนคอม (สั่งงานคอม)');
     const [cmd, ...rest] = text.split(/\s+/), arg = rest.join(' ').trim();

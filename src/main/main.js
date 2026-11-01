@@ -1076,9 +1076,8 @@ function startPhone() {
   });
   if (!notifiers.includes(phoneNotify)) notifiers.push(phoneNotify);
   telegram.start();
-  if (getTelegramToken()) telegram.setCommands(PHONE_COMMANDS).catch(() => {}); // the / menu in your chat
+  if (setup.openKeys(config.load().apiKeys).telegram) telegram.setCommands(PHONE_COMMANDS).catch(() => {}); // the / menu in your chat
 }
-const getTelegramToken = () => setup.openKeys(config.load().apiKeys).telegram || '';
 const PHONE_COMMANDS = [
   ['status', 'ดูสถานะคอม'], ['help', 'ดูวิธีใช้'], ['new', 'เริ่มเรื่องใหม่ (หรือ /new claude โปรเจกต์ เริ่ม Agent สด)'],
   ['agents', 'ดู Agent สดที่เปิดอยู่'], ['code', 'เปิด Agent สดของโปรเจกต์ที่เลือก'], ['projects', 'รายชื่อโปรเจกต์'],
