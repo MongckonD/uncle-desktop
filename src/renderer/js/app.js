@@ -69,7 +69,7 @@ async function boot() {
   applyMotion(config.motion);
   reducedMotion.onSystemChange(() => applyMotion(reducedMotion.setting));
 
-  const fx = new FxLayer(document.getElementById('fx'), { cutins: {}, intro: null });
+  const fx = new FxLayer(document.getElementById('fx'));
   fx.resize(innerWidth, innerHeight);
   // how far the top of the taskbar is from the bottom of her window: she covers it too while she
   // rests on it (the floor she stands on stays its top)
@@ -1113,10 +1113,6 @@ async function boot() {
         else panel.say({ kind: 'error', line: fmt(t.hooksFail, { error: cmd.error }), hold: 9000 });
         break;
       // --dev helpers
-      case 'intro': // her intro again, as when she starts (still: as with Windows' animations off)
-        panel.hide();
-        await capri.intro(capri.spot('post'), cmd.still ? { still: true } : {});
-        break;
       case 'pose':
         capri.debug = cmd.params || null;
         if (cmd.still) capri.nextMove = capri.nextGaze = Infinity; // no wandering off mid-test
