@@ -414,6 +414,9 @@ export class Capri {
   // ---------- frame loop ----------
 
   interval() {
+    // Sprite companions blend poses and follow audio continuously. Capri keeps
+    // her original cel-animation timing; still images and reduced motion do too.
+    if (this.character.renderer !== 'capri' && !this.character.stillImage && !reducedMotion.matches) return 1000 / 60;
     if (this.busy || this.stance === 'fall' || SPUN.has(this.stance) || this.skid || this.act?.player.act.fps === 24) return ON_ONES;
     return this.mode === 'sleep' ? ASLEEP : ON_TWOS;
   }
@@ -430,7 +433,11 @@ export class Capri {
     this.lastDraw = now;
     this.animate(now);
     const reaction = now < (this.reactionUntil || 0) ? this.reaction : '';
-    this.sprite.draw(this.p, { mode: this.mode, act: this.act?.player.name, reaction, talk: this.talk?.() || 0 });
+    this.sprite.draw(this.p, { mode: this.mode, act: this.act?.player.name, reaction, talk: this.talk?.() || 0,
+      dance:!!(this.musicDance||this.manualDance) && !this.busy && !this.dragging && !this.hidden && !this.stowed && !this.dormant && this.stance==='stand',
+      position: this.pos, stance: this.stance, moving: this.stance === 'fly',
+      bodyAngle: this.tilt * DEG,
+      gaze: this.mouse ? {x: clamp((this.mouse.x-this.pos.x)/300,-1,1),y:clamp((this.mouse.y-this.head().y)/300,-1,1)} : null });
     this.place();
   }
 

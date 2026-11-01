@@ -1,0 +1,103 @@
+{
+  "version": 2,
+  "logicalSize": [
+    320,
+    420
+  ],
+  "rigged": false,
+  "sourceDetail": "512x512 native artwork per upper-body pose, padded to 640x840; no upscaling",
+  "variants": [
+    {
+      "frameWidth": 640,
+      "frameHeight": 840,
+      "pages": [
+        {
+          "file": "640-000.webp",
+          "width": 1932,
+          "height": 1688
+        }
+      ],
+      "layers": [
+        {
+          "id": "upper-body",
+          "role": "composite",
+          "tracks": {
+            "idle": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              3,
+              0
+            ],
+            "thinking": [
+              4
+            ],
+            "attention": [
+              2,
+              0
+            ],
+            "success": [
+              3
+            ],
+            "error": [
+              4
+            ],
+            "sleep": [
+              5
+            ],
+            "talk": [
+              0,
+              2
+            ],
+            "blink": [
+              0,
+              1,
+              0
+            ],
+            "wave": [
+              0,
+              3,
+              0
+            ]
+          },
+          "frames": [
+            {
+              "page": 0,
+              "x": 2,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 646,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 1290,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 2,
+              "y": 846
+            },
+            {
+              "page": 0,
+              "x": 646,
+              "y": 846
+            },
+            {
+              "page": 0,
+              "x": 1290,
+              "y": 846
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

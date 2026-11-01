@@ -11,7 +11,35 @@
 ![macOS](https://img.shields.io/badge/macOS-beta-black)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange)](LICENSE)
 
+<a href="docs/promo/01-character-companion-en.png"><img src="docs/promo/01-character-companion-en.png" alt="Uncle Desktop — Characters and AI chat (Windows + macOS)" width="680"></a>
+
+<table>
+<tr>
+<td width="50%" align="center"><a href="docs/promo/02-voice-telegram-en.png"><img src="docs/promo/02-voice-telegram-en.png" alt="Uncle Desktop — Voice commands and Telegram" width="360"></a></td>
+<td width="50%" align="center"><a href="docs/promo/03-work-coding-en.png"><img src="docs/promo/03-work-coding-en.png" alt="Uncle Desktop — Work and Coding Agent" width="360"></a></td>
+</tr>
+</table>
+
+<details>
+<summary>ดูโปสเตอร์ภาษาไทย / Thai posters</summary>
+
+<a href="docs/promo/01-character-companion-th.png"><img src="docs/promo/01-character-companion-th.png" alt="Uncle Desktop — Characters and AI chat (Windows + macOS)" width="680"></a>
+
+<table>
+<tr>
+<td width="50%" align="center"><a href="docs/promo/02-voice-telegram-th.png"><img src="docs/promo/02-voice-telegram-th.png" alt="Uncle Desktop — Voice commands and Telegram" width="360"></a></td>
+<td width="50%" align="center"><a href="docs/promo/03-work-coding-th.png"><img src="docs/promo/03-work-coding-th.png" alt="Uncle Desktop — Work and Coding Agent" width="360"></a></td>
+</tr>
+</table>
+
+</details>
+
+<details>
+<summary>App screenshot</summary>
+
 <img src="docs/done.png" alt="Uncle Desktop on the screen" width="560">
+
+</details>
 
 </div>
 

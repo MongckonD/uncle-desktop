@@ -2,6 +2,17 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createTelegram } = require('../src/main/telegram');
 
+test('telegram authorizes actual sender IDs including callback sender, never the shared chat or bot',async()=>{
+ const got=[];let users=[11];const tg=createTelegram({getToken:()=> 'T',getChat:()=>-100,getAllowedUsers:()=>users,setChat(){},onMessage:m=>got.push(m),fetcher:async()=>({json:async()=>({ok:true,result:{}})})});
+ const msg=(id,extra={})=>({message:{chat:{id:-100},from:{id},text:'hi',...extra}});
+ await tg.handle(msg(22));await tg.handle(msg(11,{from:{id:11,is_bot:true}}));assert.equal(got.length,0);
+ await tg.handle(msg(11));assert.equal(got[0].userId,11);
+ await tg.handle({callback_query:{id:'c',from:{id:22},data:'approve',message:{chat:{id:-100},from:{id:11}}}});assert.equal(got.length,1);
+ await tg.handle({callback_query:{id:'c',from:{id:11},data:'approve',message:{chat:{id:-100},from:{id:999,is_bot:true}}}});assert.equal(got.length,2);
+ users=[22];await tg.handle(msg(11));assert.equal(got.length,2);
+ await tg.handle({message:{chat:{id:22},from:{id:22},text:'hi'}});assert.equal(got.length,3);
+});
+
 test('telegram: only the paired chat is heard; pairing with the code; message kinds', async () => {
   let chat = null; const got = []; const sent = [];
   const fetcher = async (url, init) => { sent.push([url.split('/').pop(), JSON.parse(init.body || '{}')]); return { ok: true, json: async () => ({ ok: true, result: {} }) }; };

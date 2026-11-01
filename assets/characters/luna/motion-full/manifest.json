@@ -1,0 +1,282 @@
+{
+  "version": 2,
+  "logicalSize": [
+    320,
+    420
+  ],
+  "rigged": false,
+  "sourceDetail": "Preserved states plus six new native conversation poses; figure height 666px, no enlargement",
+  "variants": [
+    {
+      "frameWidth": 320,
+      "frameHeight": 420,
+      "pages": [
+        {
+          "file": "320-000.webp",
+          "width": 1296,
+          "height": 1272
+        }
+      ],
+      "layers": [
+        {
+          "id": "body",
+          "role": "composite",
+          "tracks": {
+            "idle": [
+              0
+            ],
+            "blink": [
+              0,
+              1,
+              0
+            ],
+            "thinking": [
+              2
+            ],
+            "attention": [
+              3
+            ],
+            "success": [
+              4
+            ],
+            "error": [
+              2
+            ],
+            "sleep": [
+              5
+            ],
+            "wave": [
+              3
+            ],
+            "talk": [
+              8,
+              9,
+              10
+            ],
+            "talkNeutral": [
+              6
+            ],
+            "talkPrepare": [
+              7
+            ],
+            "talkSoft": [
+              8
+            ],
+            "talkRound": [
+              9
+            ],
+            "talkEmphasis": [
+              10
+            ],
+            "talkRest": [
+              11
+            ]
+          },
+          "frames": [
+            {
+              "page": 0,
+              "x": 2,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 326,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 650,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 974,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 2,
+              "y": 426
+            },
+            {
+              "page": 0,
+              "x": 326,
+              "y": 426
+            },
+            {
+              "page": 0,
+              "x": 650,
+              "y": 426
+            },
+            {
+              "page": 0,
+              "x": 974,
+              "y": 426
+            },
+            {
+              "page": 0,
+              "x": 2,
+              "y": 850
+            },
+            {
+              "page": 0,
+              "x": 326,
+              "y": 850
+            },
+            {
+              "page": 0,
+              "x": 650,
+              "y": 850
+            },
+            {
+              "page": 0,
+              "x": 974,
+              "y": 850
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "frameWidth": 640,
+      "frameHeight": 840,
+      "pages": [
+        {
+          "file": "640-000.webp",
+          "width": 1932,
+          "height": 1688
+        },
+        {
+          "file": "640-001.webp",
+          "width": 1932,
+          "height": 1688
+        }
+      ],
+      "layers": [
+        {
+          "id": "body",
+          "role": "composite",
+          "tracks": {
+            "idle": [
+              0
+            ],
+            "blink": [
+              0,
+              1,
+              0
+            ],
+            "thinking": [
+              2
+            ],
+            "attention": [
+              3
+            ],
+            "success": [
+              4
+            ],
+            "error": [
+              2
+            ],
+            "sleep": [
+              5
+            ],
+            "wave": [
+              3
+            ],
+            "talk": [
+              8,
+              9,
+              10
+            ],
+            "talkNeutral": [
+              6
+            ],
+            "talkPrepare": [
+              7
+            ],
+            "talkSoft": [
+              8
+            ],
+            "talkRound": [
+              9
+            ],
+            "talkEmphasis": [
+              10
+            ],
+            "talkRest": [
+              11
+            ]
+          },
+          "frames": [
+            {
+              "page": 0,
+              "x": 2,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 646,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 1290,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 2,
+              "y": 846
+            },
+            {
+              "page": 0,
+              "x": 646,
+              "y": 846
+            },
+            {
+              "page": 0,
+              "x": 1290,
+              "y": 846
+            },
+            {
+              "page": 1,
+              "x": 2,
+              "y": 2
+            },
+            {
+              "page": 1,
+              "x": 646,
+              "y": 2
+            },
+            {
+              "page": 1,
+              "x": 1290,
+              "y": 2
+            },
+            {
+              "page": 1,
+              "x": 2,
+              "y": 846
+            },
+            {
+              "page": 1,
+              "x": 646,
+              "y": 846
+            },
+            {
+              "page": 1,
+              "x": 1290,
+              "y": 846
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "crop": {
+    "x": 30.85714285714286,
+    "y": 81.0,
+    "width": 258.2857142857143,
+    "height": 339.0
+  }
+}

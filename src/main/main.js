@@ -59,10 +59,10 @@ const VIBE_TOKEN = crypto.randomBytes(24).toString('hex'); // only her own Vibec
 let vibe = null; // Vibecode: projects and their coding agents, run from your phone
 const pinHash = (pin) => crypto.createHash('sha256').update(`uncle:${pin}`).digest('hex');
 let telegram = null, phone = null; // your phone, through her Telegram bot
-let remote = null, remoteJob = null; // the computer from your phone (screen, a job, power), and the job it started
+let remote = null, remoteJob = null, remoteJobChat = null; // the computer from your phone (screen, a job, power), and the job it started
 // her Telegram settings, with what's off by default
 const PHONE_SWITCHES = { chat: true, approve: true, screen: false, control: false, power: false };
-const phoneSettings = () => { const t = config.load().telegram || {}; return { chatId: t.chatId || null, notify: t.notify || 'always', voiceReply: t.voiceReply || 'voice', switches: { ...PHONE_SWITCHES, ...t.switches }, pin: t.pin || '' }; };
+const phoneSettings = () => { const t = config.load().telegram || {}; return { chatId: t.chatId || null, requirePin:t.requirePin!==false, allowedUsers:Array.isArray(t.allowedUsers)?t.allowedUsers.filter(id=>Number.isSafeInteger(id)&&id>0):t.chatId>0?[t.chatId]:[], notify: t.notify || 'always', voiceReply: t.voiceReply || 'voice', switches: { ...PHONE_SWITCHES, ...t.switches }, pin: t.pin || '' }; };
 const savePhone = (patch) => updateConfig({ telegram: { ...config.load().telegram, ...patch } });
 // a job for her page (renderer), answered later: decoding audio and video with Chromium
 const rendererCalls = new Map();
@@ -750,6 +750,9 @@ function rebuildTray() {
   settingsGroups = [
     { id: 'appearance', title: th ? 'ตัวละคร' : 'Character', items: [item.character, item.quick, item.size, item.view, item.visible, item.custom] },
     { id: 'chat', title: th ? 'AI แชต' : 'Chat AI', items: item.chat.submenu },
+    { id: 'computer', title: th ? 'ควบคุมเครื่อง' : 'Computer control', items: [
+      { label: th ? 'ตั้งค่าสิทธิ์และเริ่มงานควบคุมเครื่อง…' : 'Permissions and computer jobs…', click: () => sendCommand('computer') },
+    ] },
     { id: 'voice', title: th ? 'เสียงและไมค์' : 'Voice', items: [
       { label: th ? 'เสียงพูดภาษาไทย…' : 'Speech settings…', click: () => sendCommand('speech') },
       { label: th ? 'ไมค์ คำเรียก และ ElevenLabs…' : 'Mic, wake phrase and ElevenLabs…', click: () => sendCommand('listening') },
@@ -823,7 +826,7 @@ function rebuildTray() {
         { label: `Telegram: ${state}`, enabled: false },
         { label: hasToken ? (th ? 'เปลี่ยน bot token…' : 'Change bot token…') : (th ? 'ใส่ bot token…' : 'Add a bot token…'), click: () => sendCommand('telegram-token') },
         ...(hasToken ? [{ label: s.chatId ? (th ? 'ผูกกับแชตใหม่…' : 'Pair again…') : (th ? 'ผูกกับแชตของคุณ…' : 'Pair with your chat…'), click: () => { const code = telegram.startPairing(); shell.openExternal(`https://t.me/${bot}?start=${code}`); notifyUser({ kind: 'info', message: `เปิด Telegram แล้ว กด Start (หรือส่ง /start ${code}) ภายใน 10 นาที` }); } }] : []),
-        ...(s.chatId ? [{ label: th ? 'ส่งข้อความทดสอบ' : 'Send a test message', click: () => telegram.send(s.chatId, 'ทดสอบจาก Uncle Desktop 👋').catch((err) => notifyUser({ kind: 'error', message: err.message })) }, { label: th ? 'เลิกผูกแชต' : 'Unpair', click: () => savePhone({ chatId: null }) }] : []),
+        ...(s.chatId ? [{ label: th ? 'ส่งข้อความทดสอบ' : 'Send a test message', click: () => telegram.send(s.chatId, 'ทดสอบจาก Uncle Desktop 👋').catch((err) => notifyUser({ kind: 'error', message: err.message })) }, { label: th ? 'เลิกผูกแชต' : 'Unpair', click: () => savePhone({ chatId: null,allowedUsers:[] }) }] : []),
         { label: `LINE: ${setup.openKeys(cfg.apiKeys).line && cfg.line?.to ? (th ? 'ส่งแจ้งเตือนเข้า LINE แล้ว' : 'alerts go to LINE') : (th ? 'ยังไม่ได้ตั้ง' : 'not set')}`, submenu: [
           { label: th ? 'ใส่ LINE channel access token…' : 'LINE channel access token…', click: () => sendCommand('ask-value', { key: 'lineToken', title: 'LINE channel access token', hint: 'จาก LINE Developers › Messaging API', secret: true }) },
           { label: th ? 'ใส่ LINE user ID ของคุณ…' : 'Your LINE user ID…', click: () => sendCommand('ask-value', { key: 'lineTo', title: 'LINE user ID', hint: 'U… (LINE Developers › Basic settings › Your user ID)' }) },
@@ -843,6 +846,8 @@ function rebuildTray() {
         sw('control', th ? 'สั่งงานคอมจากมือถือ (/pc PIN งาน)' : 'Computer jobs from your phone (/pc PIN task)'),
         sw('power', th ? 'ล็อก พัก ปิดเครื่องจากมือถือ (/lock PIN)' : 'Lock, sleep, shut down from your phone (/lock PIN)'),
         { type: 'separator' },
+        { label: th ? 'ขอ PIN ก่อนสั่งงานจาก Telegram' : 'Require PIN for Telegram commands', type:'checkbox',checked:s.requirePin,enabled:s.allowedUsers.length>0,click:it=>savePhone({requirePin:it.checked}) },
+        { label: th ? 'ผู้ใช้ที่อนุญาตให้สั่งงาน…' : 'Allowed Telegram users…',click:()=>sendCommand('ask-value',{key:'telegramUsers',title:'Telegram User ID ที่อนุญาต',hint:'ส่ง /whoami ไปหาบอตเพื่อดู ID · คั่นหลายคนด้วยจุลภาค · ลบทั้งหมดเพื่อปิดสิทธิ์ทุกคน',value:s.allowedUsers.join(', ')}) },
         { label: s.pin ? (th ? 'เปลี่ยน PIN…' : 'Change PIN…') : (th ? 'ตั้ง PIN (สำหรับคำสั่งเสี่ยงจากมือถือ)…' : 'Set a PIN (for risky commands)…'), click: () => sendCommand('telegram-pin') },
         { label: `Vibecode: ${config.load().vibe?.workspace || path.join(app.getPath('home'), 'vibe-projects')}`.slice(0, 90), enabled: false },
         { label: th ? 'เลือกโฟลเดอร์โปรเจกต์ Vibecode…' : 'Choose the Vibecode folder…', click: async () => { const r = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] }); if (!r.canceled && r.filePaths[0]) updateConfig({ vibe: { ...config.load().vibe, workspace: r.filePaths[0] } }); } },
@@ -994,7 +999,8 @@ function startPhone() {
   telegram = createTelegram({
     getToken: () => setup.openKeys(config.load().apiKeys).telegram || '',
     getChat: () => phoneSettings().chatId,
-    setChat: (chatId) => { savePhone({ chatId }); notifyUser({ kind: 'info', message: 'ผูก Telegram กับแชตของคุณแล้ว' }); rebuildTray(); },
+    getAllowedUsers:()=>phoneSettings().allowedUsers,
+    setChat: (chatId,userId) => { savePhone({ chatId,allowedUsers:[userId] }); notifyUser({ kind: 'info', message: 'ผูก Telegram กับแชตของคุณแล้ว' }); rebuildTray(); },
     onMessage: (m) => phone.onMessage(m),
     log: (line) => console.log(line),
   });
@@ -1069,7 +1075,7 @@ async function setTelegramToken(token) {
   if (!/^\d{5,}:[\w-]{30,}$/.test(token)) throw new Error('bot token ไม่ถูกต้อง (หน้าตาแบบ 123456789:AA…)');
   const probe = createTelegram({ getToken: () => token, getChat: () => null, setChat: () => {}, onMessage: () => {} });
   const me = await probe.me();
-  updateConfig({ apiKeys: { ...config.load().apiKeys, telegram: setup.sealKey(token) }, telegram: { ...config.load().telegram, bot: me.username, chatId: null } });
+  updateConfig({ apiKeys: { ...config.load().apiKeys, telegram: setup.sealKey(token) }, telegram: { ...config.load().telegram, bot: me.username, chatId: null,allowedUsers:[] } });
   startPhone();
   return me.username;
 }
@@ -1268,9 +1274,9 @@ function registerIpc() {
   });
   computer = createComputer({ native: computerNative,system:systemTools,
     notify: state => {
-      overlay?.webContents.send('computer:state', state);
+      overlay?.webContents.send('computer:state', {...state,remote:state.id===remoteJob});
       // a job your phone started: its end goes back to your phone
-      if (state.id === remoteJob && ['done', 'error', 'stopped'].includes(state.status)) { remoteJob = null; phone?.notify({ kind: 'agent', message: `${state.status === 'done' ? '✅' : '⚠️'} งานบนคอม: ${state.message}${state.evidence ? `
+      if (state.id === remoteJob && ['done', 'error', 'stopped'].includes(state.status)) { remoteJob = null; phone?.notify({ kind: 'agent', chatId:remoteJobChat, message: `${state.status === 'done' ? '✅' : '⚠️'} งานบนคอม: ${state.message}${state.evidence ? `
 ${state.evidence}` : ''}` }); }
     },
     // her cursor: screen pixels (Windows) or points (Mac) into the overlay's own coordinates
@@ -1300,16 +1306,27 @@ ${state.evidence}` : ''}` }); }
       return llm.chat(cfg.provider,cfg,{model:computerModel,messages:[{role:'system',content:prompt},observation]},()=>{},AbortSignal.any([signal,timeout]));
     },
   });
+  async function volumePlan(task) {
+    const {volumeCommand}=await import('../renderer/js/computer-intent.js');const volume=volumeCommand(task);
+    if(!volume)return {task};
+    const action={tool:'media',action:volume.action,...(volume.level!==undefined?{level:volume.level}:{}),reason:'ปรับเสียงระบบตามคำสั่ง'};
+    if(!volume.browser)return {task,directAction:action};
+    const goals={mute:'ปิดเสียงตัวเล่นและตรวจว่าปิดแล้ว',unmute:'ปลดปิดเสียงแท็บและตัวเล่น ถ้าระดับเสียงตัวเล่นเป็น 0 ให้เพิ่มเป็น 25 เปอร์เซ็นต์',volume_up:`เพิ่มเสียงตัวเล่น ${volume.level??10} จุดเปอร์เซ็นต์ และปลดปิดเสียงหากปิดอยู่`,volume_down:`ลดเสียงตัวเล่น ${volume.level??10} จุดเปอร์เซ็นต์ โดยไม่เปลี่ยนสถานะปิดเสียง`,volume_set:`ตั้งเสียงตัวเล่น ${volume.level} เปอร์เซ็นต์`};
+    const browserTask=`${task}\nจัดการเบราว์เซอร์ที่กำลังเล่นสื่อ: ${goals[volume.action]} ตรวจสถานะปุ่มและแท็บก่อน ไม่กดปุ่มสลับเสียงโดยไม่รู้สถานะ ตรวจผลจากสถานะปุ่มจริง ห้ามอ้างว่าปรับได้หากไม่มีหลักฐาน`;
+    return {task:browserTask,...(volume.windows?{firstAction:action}:{})};
+  }
   remote = {
     screen: async () => { notifyUser({ kind: 'info', message: '📱 ส่งภาพหน้าจอให้ Telegram ของคุณแล้ว' }); return Buffer.from(await snapScreen(), 'base64'); },
-    pc: async (task) => {
+    pc: async (task,chatId=phoneSettings().chatId) => {
       if (!task.trim()) return 'บอกงานด้วย เช่น /pc 1234 เปิด Spotify';
       if (computer.busy) return 'มีงานบนคอมกำลังทำอยู่';
       const o = computerOptions();
       if (!o.consent) return 'ยังไม่ได้อนุญาตควบคุมเครื่องบนคอม (หน้าควบคุมเครื่อง)';
       computerConfig = llmConfig(); computerModel = modelFor('computer', computerConfig);
-      if (!computerModel) return 'ยังไม่ได้ตั้งค่า AI บนคอม';
-      remoteJob = computer.start({ task, consent: true, images: o.images, security: o.security, switches: o.switches });
+      const plan=await volumePlan(task);
+      if (!computerModel&&!plan.directAction) return 'ยังไม่ได้ตั้งค่า AI บนคอม';
+      remoteJobChat=chatId;
+      remoteJob = computer.start({ ...plan, consent: true, images: o.images, security: o.security, switches: o.switches });
       notifyUser({ kind: 'info', message: `📱 งานจาก Telegram: ${task}` });
       return `เริ่มงานบนคอมแล้ว: ${task} — เสร็จแล้วจะบอก`;
     },
@@ -1319,12 +1336,13 @@ ${state.evidence}` : ''}` }); }
   const validSwitches=v=>v&&typeof v==='object'&&SWITCHES.every(k=>typeof v[k]==='boolean')?Object.fromEntries(SWITCHES.map(k=>[k,v[k]])):null;
   ipcMain.handle('computer:info',()=>({settings:computerOptions(),provider:config.load().provider}));
   ipcMain.handle('computer:save',(_e,value)=>{if(!value||['consent','voice','images'].some(k=>typeof value[k]!=='boolean')||(value.security!==undefined&&!SECURITY.includes(value.security))||(value.switches!==undefined&&!validSwitches(value.switches)))throw new Error('ตัวเลือกควบคุมไม่ถูกต้อง');const prior=computerOptions();if(!value.consent||(prior.images&&!value.images)||(prior.voice&&!value.voice))computer.stop();updateConfig({computerControl:{consent:value.consent,voice:value.voice,images:value.images,security:value.security||computerOptions().security,switches:value.switches?validSwitches(value.switches):LEVELS[value.security||computerOptions().security],provider:config.load().provider}});return computerOptions();});
-  ipcMain.handle('computer:start' , (_e, request) => {
+  ipcMain.handle('computer:start' , async (_e, request) => {
     if(computer.busy)throw new Error('มีงานกำลังทำอยู่');
     if(request?.voice&&(!computerOptions().consent||!computerOptions().voice))throw new Error('กรุณาอนุญาตเริ่มงานด้วยเสียงก่อน');
     computerConfig=llmConfig();computerModel=modelFor('computer',computerConfig);
-    if(!computerModel)throw new Error('กรุณาตั้งค่า AI และเลือกโมเดลก่อนเริ่ม');
-    const {task,consent,images,voice}=request||{};return computer.start({task,consent,images,voice,security:computerOptions().security,switches:computerOptions().switches});
+    const {task,consent,images,voice}=request||{};const plan=await volumePlan(task);
+    if(!computerModel&&!plan.directAction)throw new Error('กรุณาตั้งค่า AI และเลือกโมเดลก่อนเริ่ม');
+    return computer.start({...plan,consent,images,voice,security:computerOptions().security,switches:computerOptions().switches});
   });
   ipcMain.handle('computer:answer', (_e, value) => {if(!value||typeof value.jobId!=='string'||typeof value.approvalId!=='string')throw new Error('คำยืนยันต้องตรงกับขั้นตอนปัจจุบัน');return computer.answer(value);});
   ipcMain.on('computer:stop', () => computer.stop());
@@ -1527,6 +1545,7 @@ ${state.evidence}` : ''}` }); }
     if (key === 'routine') { const r = parseRoutine(value); updateConfig({ routines: [...(config.load().routines || []), r].slice(-20) }); return `${r.at} ${r.days}: ${r.prompt}`; }
     if (key === 'lineToken') { if (!/^[\w+/=-]{60,}$/.test(value)) throw new Error('LINE channel access token ไม่ถูกต้อง'); updateConfig({ apiKeys: { ...config.load().apiKeys, line: setup.sealKey(value) } }); return 'บันทึกแล้ว'; }
     if (key === 'lineTo') { if (!/^U[0-9a-f]{32}$/.test(value)) throw new Error('LINE user ID ขึ้นต้นด้วย U ตามด้วย 32 ตัว'); updateConfig({ line: { ...config.load().line, to: value } }); return 'บันทึกแล้ว'; }
+    if(key==='telegramUsers'){const ids=value?value.split(/[,\s]+/).filter(Boolean):[];if(ids.length>50||ids.some(id=>!/^\d+$/.test(id)||!Number.isSafeInteger(Number(id))||Number(id)<=0))throw new Error('ใส่ Telegram User ID ตัวเลข คั่นด้วยจุลภาค สูงสุด 50 คน');const allowedUsers=[...new Set(ids.map(Number))];savePhone({allowedUsers});return allowedUsers.join(', ')||'ไม่อนุญาตผู้ใช้ใด';}
     throw new Error('ไม่รู้จักค่านี้');
   });
   ipcMain.handle('news:set', (_e, { key, value } = {}) => {
@@ -1869,8 +1888,8 @@ function main() {
         if (llm.isChatSession(evt.session_id)) return;
         overlay?.webContents.send('claude:event', evt);
         const where = path.basename(evt.cwd || '') || 'Claude Code';
-        if (evt.hook_event_name === 'Notification') phone?.notify({ kind: 'agent', message: `${where}: ${evt.message || 'รอคุณอยู่'}` });
-        if (evt.hook_event_name === 'Stop' && !vibe?.projects().includes(where)) phone?.notify({ kind: 'agent', message: `${where}: ทำงานเสร็จแล้ว` });
+        if (evt.hook_event_name === 'Notification') phone?.notify({ kind: 'agent', chatId:remoteJobChat, message: `${where}: ${evt.message || 'รอคุณอยู่'}` });
+        if (evt.hook_event_name === 'Stop' && !vibe?.projects().includes(where)) phone?.notify({ kind: 'agent', chatId:remoteJobChat, message: `${where}: ทำงานเสร็จแล้ว` });
       },
       onDebug: DEV ? debugHandler : null,
       onApprove: approveForVibe,

@@ -6,6 +6,32 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const { createListening, listeningSettings, validWav } = require('../src/main/listening');
 const audio = import('../src/renderer/js/listening-audio.js');
+
+test('continuous listening survives a failed utterance and accepts the next one without reopening settings',async()=>{
+  const {Listening}=await import('../src/renderer/js/listening.js');
+  for(const mode of ['wake','always']){
+    const v=Object.create(Listening.prototype),stream={};let calls=0,sent=0;
+    Object.assign(v,{serial:1,stream,root:{hidden:true},settings:{mode,wakeWords:['ลุงเดฟ'],review:false},followUntil:0,
+      status:{},indicator:{},transcript:{},sendButton:{},chat:{},speech:{active:false},onVisibility(){},
+      releaseMic(){this.stream=null;},host:{listeningStop(){},listeningTranscribe:async()=>{if(++calls===1)throw Error('temporary transcription failure');return {text:mode==='wake'?'ลุงเดฟ เปิด Notepad':'เปิด Notepad'};}},
+      submit:async()=>{sent++;v.pending=false;}});
+    await v.process([]).catch(e=>v.error(e));
+    assert.equal(v.stream,stream,mode+': one failed utterance must not turn off continuous capture');
+    assert.equal(v.root.hidden,true);assert.equal(v.serial,1);assert.equal(v.processing,false);
+    await v.process([]);assert.equal(sent,1,mode+': next utterance should still work');
+    v.stop();assert.equal(v.stream,null);assert.equal(v.serial,2);
+  }
+});
+
+test('closing chat keeps wake/always capture active but push-to-talk still stops',async()=>{
+  const {Listening}=await import('../src/renderer/js/listening.js');
+  for(const mode of ['wake','always','push']){
+    const v=Object.create(Listening.prototype);let stopped=0,silenced=0;
+    Object.assign(v,{settings:{mode},stream:{},speech:{stop(){silenced++;}},stop(){stopped++;this.stream=null;}});
+    v.endConversation();assert.equal(silenced,1);assert.equal(stopped,mode==='push'?1:0);
+    assert.equal(!!v.stream,mode!=='push');
+  }
+});
 test('listening settings validate custom wake phrases, consent, devices and limits', () => {
   assert.deepEqual(listeningSettings({ wakeWords: [' ลุงเดฟ ', 'ลุงเดฟ', 'Hey Uncle'] }).wakeWords, ['ลุงเดฟ', 'Hey Uncle']);
   for (const bad of [{ mode: 'always-upload' }, { wakeWords: [] }, { wakeWords: ['x'] }, { followSeconds: 31 }, { review: 'false' }, { threshold: 0 }, { deviceId: {} }]) assert.throws(() => listeningSettings(bad));

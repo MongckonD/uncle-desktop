@@ -42,14 +42,14 @@ export class Listening {
     this.level = el('meter'); this.level.min = 0; this.level.max = 0.1; this.level.setAttribute('aria-label', 'ระดับเสียงไมค์'); box.append(this.level);
     this.status = el('p', 'ไมค์ปิดอยู่'); this.status.className = 'speech-status'; this.status.setAttribute('role', 'status'); box.append(this.status);
     this.confirmButtons = el('div'); this.confirmButtons.className = 'speech-actions'; this.confirmButtons.hidden = true;
-    const yes = el('button', 'ใช่ — ยืนยัน'); yes.onclick = () => this.answerConfirmation('ใช่').catch(e => this.error(e));
+    const yes = el('button', 'ใช่ — ยืนยัน'); yes.onclick = () => this.answerConfirmation('ใช่').catch(e => this.error(e,{recoverable:true}));
     this.confirmYes = yes;
-    const no = el('button', 'ไม่ใช่ / ยกเลิก'); no.onclick = () => this.answerConfirmation('ยกเลิก').catch(e => this.error(e));
+    const no = el('button', 'ไม่ใช่ / ยกเลิก'); no.onclick = () => this.answerConfirmation('ยกเลิก').catch(e => this.error(e,{recoverable:true}));
     this.confirmButtons.append(yes, no);
     this.diagnostics = el('p', 'ผลทดสอบจะแสดงชื่อโมเดลและเวลาถอดเสียง'); box.append(this.diagnostics);
     this.heard = field('เสียงที่ถอดได้ล่าสุด — แสดงแม้ไม่ตรงคำเรียก', el('textarea')); this.heard.rows = 2; this.heard.readOnly = true; this.heard.placeholder = 'เมื่อถอดเสียงสำเร็จ ข้อความจะปรากฏที่นี่';
     this.transcript = field('คำสั่งที่จะส่ง — แก้ไขก่อนส่งได้', el('textarea')); this.transcript.rows = 3; this.transcript.maxLength = 4000;
-    this.sendButton = el('button', 'ส่งข้อความนี้'); this.sendButton.disabled = true; this.sendButton.onclick = () => this.submit().catch(e => this.error(e));
+    this.sendButton = el('button', 'ส่งข้อความนี้'); this.sendButton.disabled = true; this.sendButton.onclick = () => this.submit().catch(e => this.error(e,{recoverable:true}));
     const discard = el('button', 'ล้างข้อความ / กลับไปรอเรียก'); discard.onclick = () => { this.clearConfirmation(); this.pending = false; this.transcript.value = ''; this.sendButton.disabled = true; this.followUntil = 0; this.lastResultStatus = ''; this.idle(); };
     box.append(this.sendButton, discard);
     const controls = document.createDocumentFragment(); controls.append(actions, this.level, this.status, this.confirmButtons, this.diagnostics, this.heard.parentElement, this.transcript.parentElement, this.sendButton, discard);
@@ -75,7 +75,19 @@ export class Listening {
   setStatus(text) { this.status.textContent = text; if (this.stream) this.indicator.textContent = this.indicator.title = `■ ปิดไมค์ · ${text}`;
     // which step a command is at, for the small icon: waiting, turning speech into text, doing it
     if (this.indicator.dataset) this.indicator.dataset.state = this.submitting ? 'work' : this.processing ? 'hear' : 'listen'; }
-  error(error) { this.stop(); this.root.hidden = false; this.onVisibility(true); this.setStatus(String(error.message || error).replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '')); }
+  error(error,{recoverable=false}={}) {
+    const message=String(error.message || error).replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '');
+    if(recoverable && this.stream && ['wake','always'].includes(this.settings?.mode)) {
+      this.pending=false;this.utterance?.reset();this.suppressUntil=Date.now()+1500;
+      this.lastResultStatus=`คำสั่งนี้ไม่สำเร็จ: ${message} · ยังเปิดไมค์รอฟังต่ออยู่`;
+      this.setStatus(this.lastResultStatus);this.chat.voiceResult?.(this.lastResultStatus);return;
+    }
+    this.stop(); this.root.hidden = false; this.onVisibility(true); this.setStatus(message);
+  }
+  endConversation() {
+    this.speech.stop();
+    if(!['wake','always'].includes(this.settings?.mode))this.stop();
+  }
   async load() {
     const info = await this.host.listeningInfo(); this.settings = info.settings;await this.realtime?.load();
     for (const key of ['mode', 'provider', 'localModel']) this[key].value = this.settings[key];
@@ -113,7 +125,7 @@ export class Listening {
     if (this.confirmButtons) this.confirmButtons.hidden = false;
     if (this.confirmYes) this.confirmYes.hidden = Boolean(request.clarify);
     this.setStatus(request.question);
-    if (this.root) { this.root.hidden = false; this.onVisibility(true); }
+    this.chat.voiceResult?.(request.question);
     if (!this.stream && this.root) this.capture().catch(error => this.error(error));
     const serial = this.serial;
     this.speakFeedback(request.question).then(async () => {
@@ -260,7 +272,7 @@ export class Listening {
       if (this.settings.review) { this.setStatus('ตรวจข้อความแล้วกดส่ง หรือยกเลิก'); await this.show(); }
       else await this.submit();
       if (this.settings.mode === 'push' && serial === this.serial && !this.confirmation && !this.externalJob) this.releaseMic();
-    } catch (error) { if (serial === this.serial && (!confirmation || this.confirmation === confirmation)) throw error; }
+    } catch (error) { if (serial === this.serial && (!confirmation || this.confirmation === confirmation)) this.error(error,{recoverable:true}); }
     finally { if (serial === this.serial) { this.processing = false; if (!this.pending && this.stream && !waking) this.idle(); } }
   }
   async submit() {

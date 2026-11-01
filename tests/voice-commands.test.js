@@ -43,6 +43,17 @@ test('missing reminder time asks for clarification, and unsupported actions neve
   await runVoiceCommand({ chat: { asked: () => assert.fail('not a supported tool') }, text: 'ลบไฟล์ทั้งหมด', respond: text => { response = text; } });
   assert.match(response, /ยังไม่ได้ดำเนินการ/);
 });
+
+test('missing app asks through normal chat and speech without opening voice settings',async()=>{
+  const {runVoiceCommand}=await commands,v=await controller();const replies=[],spoken=[];let retried,visibility=0;
+  v.root={hidden:true};v.onVisibility=()=>visibility++;
+  v.chat.voiceResult=line=>replies.push(line);v.speech.play=async line=>spoken.push(line);
+  const chat={asked:()=>({kind:'open',text:'missing-app'}),doNow:async()=>null};
+  await runVoiceCommand({chat,text:'เปิดโปรแกรม missing-app',ask:r=>v.requestConfirmation(r),fallback:text=>{retried=text;}});
+  assert.equal(v.root.hidden,true,'Conversational clarification must not open a settings dialog');
+  assert.equal(visibility,0);assert.match(replies[0],/ยังหาโปรแกรม/);assert.deepEqual(spoken,replies);
+  await v.answerConfirmation('Notepad');assert.equal(retried,'เปิดโปรแกรม Notepad');
+});
 test('late confirmation transcription is discarded after expiry instead of becoming a new command', async () => {
   const v = await controller(); v.heard = {}; let sent = 0, resolve;
   v.host.listeningTranscribe = () => new Promise(done => { resolve = done; }); v.submit = async () => { sent++; };

@@ -10,6 +10,7 @@ import { Chat } from './chat.js';
 import { Setup } from './setup.js';
 import { Custom } from './custom.js';
 import { CharacterPicker } from './character-picker.js';
+import { loadCharacterSource } from './character-assets.js';
 import { Speech } from './speech.js';
 import { Listening } from './listening.js';
 import { VoiceAgent } from './voice-agent.js';
@@ -52,7 +53,7 @@ async function boot() {
   let settingsUI = null;
   let computerUI = null;
   const loadCharacter = (character) => Promise.all([
-    loadImage(characterAsset(character, 'atlas')),
+    character.renderer === 'capri' ? loadImage(characterAsset(character, 'atlas')) : loadCharacterSource(character),
     loadImage(characterAsset(character, 'portrait')),
   ]);
   const [image, portrait] = await loadCharacter(config.character);
@@ -398,7 +399,7 @@ async function boot() {
   chat.onJobTell = tellJob;
   listeningUI.onJobControl=async text=>{if(/^(?:หยุด(?:งาน|ทำงาน)?|ยกเลิก(?:งาน)?|stop|cancel)[.!\s]*$/i.test(text)){host.computerStop();speechUI.stop();}else if(await tellJob(text))listeningUI.setStatus('รับทราบ: '+text);else listeningUI.setStatus('กำลังทำงานอยู่ — พูดหยุดงานเพื่อยกเลิก');};
   chat.onReply = (text) => { if (listeningUI.submitting) listeningUI.speakFeedback(text); else speechUI.reply(text); };
-  chat.onSpeechStop = () => { speechUI.stop(); listeningUI.stop(); };
+  chat.onSpeechStop = () => listeningUI.endConversation();
   brain.onTalk = () => chat.start();
   // Getting her chat going with buttons (setup.js): Ollama and a model, a key, or an address
   const setup = new Setup({ guide, panel, host, brain, capri, voice });
@@ -901,7 +902,8 @@ async function boot() {
       mp.hidden = !on; mp.classList.toggle('is-playing', playing);
       mp.querySelector('.mp-text').textContent = mp.title = on ? `${cmd.title}${cmd.artist ? ` — ${cmd.artist}` : ''}` : '';
       clearInterval(window.__uncleMusicDance);
-      if (playing) window.__uncleMusicDance = setInterval(() => { if (!capri.busy && !capri.act && !capri.dragging && !capri.hidden && !capri.stowed && !capri.dormant) capri.perform('hop'); }, 1500);
+      capri.musicDance=playing;
+      if (playing) window.__uncleMusicDance = setInterval(() => { if (capri.character.renderer==='capri' && !capri.busy && !capri.act && !capri.dragging && !capri.hidden && !capri.stowed && !capri.dormant) capri.perform('hop'); }, 1500);
       return;
     }
     if (cmd.name === 'computer-cursor') { // her own cursor glides there just before she clicks
@@ -922,8 +924,8 @@ async function boot() {
       else if(action==='hang')await capri.peek('top');
       else if(action==='ride_cursor'){clearInterval(window.__uncleRide);window.__uncleRide=setInterval(async()=>{if(capri.dragging){clearInterval(window.__uncleRide);return;}const cursor=await host.cursor();if(cursor?.inside)capri.pos={x:cursor.x+30,y:cursor.y+30};},80);}
       else if(action==='leave_cursor')clearInterval(window.__uncleRide);
-      else if(action==='dance'){clearInterval(window.__uncleDance);window.__uncleDance=setInterval(()=>capri.perform('hop'),1200);}
-      else if(action==='stop_dance')clearInterval(window.__uncleDance);
+      else if(action==='dance'){clearInterval(window.__uncleDance);capri.manualDance=true;window.__uncleDance=setInterval(()=>{if(capri.character.renderer==='capri' && !capri.busy && !capri.dragging && capri.mode==='idle')capri.perform('hop');},1200);}
+      else if(action==='stop_dance'){clearInterval(window.__uncleDance);clearInterval(window.__uncleMusicDance);capri.manualDance=false;capri.musicDance=false;}
       else if(action==='idle')capri.setMode('idle');
       else if(action==='smile')capri.perform('victory');
       else if(action==='blink')capri.perform('look');

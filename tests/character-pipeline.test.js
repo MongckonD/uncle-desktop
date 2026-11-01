@@ -1,0 +1,143 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const path=require('node:path');
+const {pathToFileURL}=require('node:url');
+const load=name=>import(pathToFileURL(path.join(__dirname,'../src/renderer/js',name)).href);
+const variant=(width=320,layers=1)=>({frameWidth:width,frameHeight:width*420/320,pages:[{file:'a.webp',width:width+4,height:width*420/320+4}],layers:Array.from({length:layers},(_,i)=>({id:`part${i}`,frames:[{page:0,x:2,y:2}]}))});
+
+test('native frame extraction and bust crop are independent of logical coordinates',async()=>{
+  const {atlasRect,dimensions}=await load('character-assets.js');
+  for(const width of [320,640,960]){
+    const s=width/320,c={columns:4,frameWidth:width,frameHeight:420*s};
+    assert.deepEqual(atlasRect(5,c),{x:width,y:420*s,width,height:420*s});
+    assert.deepEqual(atlasRect(5,c,{x:55,y:14,width:210,height:275.625}),{x:width+55*s,y:420*s+14*s,width:210*s,height:275.625*s});
+  }
+  assert.deepEqual(dimensions({}),{width:320,height:420});
+  assert.throws(()=>dimensions({frameWidth:640,frameHeight:420}));
+});
+
+test('resolution selection accounts for DPI, GPU limits and working-set memory',async()=>{
+  const {chooseVariant}=await load('character-assets.js'),vs=[variant(),variant(640),variant(960)];
+  assert.equal(chooseVariant(vs,.6).frameWidth,320);
+  assert.equal(chooseVariant(vs,1.6).frameWidth,640);
+  assert.equal(chooseVariant(vs,3).frameWidth,960);
+  assert.equal(chooseVariant(vs,3,1024).frameWidth,640);
+  assert.equal(chooseVariant(vs,3,512).frameWidth,320);
+  assert.equal(chooseVariant(vs,3,256),null);
+  assert.equal(chooseVariant(vs,3,4096,600000).frameWidth,320);
+});
+
+test('manifest rejects invalid UVs, cycles, duplicate IDs and tracks',async()=>{
+  const {validateManifest}=await load('character-assets.js');
+  const make=()=>({version:2,variants:[variant()]});
+  assert.ok(validateManifest(make()));
+  let m=make();m.variants[0].layers[0].frames[0].x=900;assert.throws(()=>validateManifest(m));
+  m=make();m.variants[0].layers[0].parent='part0';assert.throws(()=>validateManifest(m));
+  m=make();m.variants[0].layers[0].tracks={idle:[44]};assert.throws(()=>validateManifest(m));
+  m=make();m.variants[0].pages[0].file='../outside.png';assert.throws(()=>validateManifest(m));
+});
+
+test('shared cache bounds memory, serializes decodes and closes evicted images',async()=>{
+  const {AtlasCache}=await load('character-assets.js');let inFlight=0,max=0,closed=0,decodes=0;
+  const cache=new AtlasCache({budget:800,decode:async()=>{
+    decodes++;max=Math.max(max,++inFlight);await new Promise(r=>setTimeout(r,1));inFlight--;
+    return {width:10,height:10,close(){closed++;}};
+  }});
+  const page=url=>({url,width:10,height:10});
+  await Promise.all(['a','b','c'].map(id=>cache.group([page(id)],images=>assert.equal(images.length,1))));
+  assert.equal(max,1);assert.equal(cache.bytes,800);assert.equal(closed,1);
+  await cache.group([page('c')],()=>{});assert.equal(decodes,3);
+  await assert.rejects(cache.group([page('d'),page('e'),page('f')],()=>{}));
+  cache.clear();assert.equal(cache.bytes,0);assert.equal(closed,3);
+});
+
+test('springs remain bounded after impulses, variable dt, gravity and suspension',async()=>{
+  const {Spring,springSettings}=await load('character-rig.js');
+  const s=new Spring({mass:.01,stiffness:999,damping:0,max:3});
+  assert.equal(springSettings({mass:0}).mass,.1);
+  for(let i=0;i<2000;i++){s.step(i%2?.016:9,i<500?100000:0);assert.ok(Number.isFinite(s.x)&&Math.abs(s.x)<=3);}
+  assert.ok(Math.abs(s.x)<.01);s.reset();assert.equal(s.v,0);
+});
+
+test('ground-registered legs, parented features and reduced motion',async()=>{
+  const {CharacterRig,applyPose}=await load('character-rig.js');
+  const rig=new CharacterRig(),leg={id:'leg',role:'leg',pivot:[140,270],foot:[140,418]};
+  for(let i=0;i<200;i++){
+    const context={position:{x:i,y:0},moving:true,state:'idle'};
+    const motion=rig.update(i*16,context),p=rig.pose(leg,motion,context);
+    const footY=270+Math.cos(p.angle)*148+p.y;
+    assert.ok(footY<=418.00001&&footY>=410);
+  }
+  const context={position:{x:9999,y:0},still:true,state:'idle'};
+  const motion=rig.update(4000,context);assert.ok(motion.teleport);
+  assert.deepEqual(rig.pose({...leg,physics:{}},motion,context),{x:0,y:0,angle:0});
+  const calls=[],ctx={translate:(...v)=>calls.push(v),rotate:()=>{}};
+  const layers=[{id:'head',pivot:[0,0]},{id:'eyes',parent:'head',pivot:[0,0]}];
+  applyPose(ctx,layers[1],new Map([['head',{x:3,y:4,angle:.1}],['eyes',{x:1,y:2,angle:0}]]),layers);
+  assert.deepEqual(calls[0],[3,4]);assert.deepEqual(calls[2],[1,2]);
+});
+
+test('independent blink, mouth, gaze and leg tracks preserve other states',async()=>{
+  const {trackFrame}=await load('character-rig.js');
+  const layer={frames:[{},{},{},{}],tracks:{idle:[0],open:[0],closed:[1],blink:[2],round:[3],walk:[1,2],sit:[3],success:[2],error:[3],thinking:[1]}};
+  assert.equal(trackFrame({...layer,role:'eyes'},'idle',4600),2);
+  assert.equal(trackFrame({...layer,role:'eyes'},'idle',4600,4,{still:true}),0);
+  assert.equal(trackFrame({...layer,role:'eyes'},'sleep',0),1);
+  assert.equal(trackFrame({...layer,role:'mouth'},'thinking',0,4,{talk:.1}),3);
+  assert.equal(trackFrame({...layer,role:'mouth'},'idle',0,4,{viseme:'closed',talk:1}),1);
+  assert.equal(trackFrame({...layer,role:'leg'},'idle',250,4,{moving:true}),2);
+  assert.equal(trackFrame({...layer,role:'leg'},'idle',0,4,{stance:'sit'}),3);
+  for(const [state,index] of [['thinking',1],['success',2],['error',3]])assert.equal(trackFrame(layer,state,0),index);
+});
+
+test('shipped bust art contains six distinct native-size source poses and validated atlas pages', async()=>{
+  const fs=require('node:fs');
+  const {validateManifest,chooseVariant}=await load('character-assets.js');
+  for(const id of ['mochi','lili','luna','pudding']){
+    const root=path.join(__dirname,'../assets/characters',id);
+    const manifest=validateManifest(JSON.parse(fs.readFileSync(path.join(root,'bust-hd/manifest.json'))));
+    const variant=chooseVariant(manifest.variants,2,2048);
+    assert.equal(variant.frameWidth,640);
+    assert.match(manifest.sourceDetail,/512x512/);
+    assert.equal(new Set(variant.layers[0].frames.map(f=>`${f.page}/${f.x}/${f.y}`)).size,6);
+    for(const page of variant.pages)assert.ok(fs.statSync(path.join(root,'bust-hd',page.file)).size>1000);
+    const {trackFrame}=await load('character-rig.js');
+    const composite=variant.layers[0];
+    assert.equal(trackFrame(composite,'sleep',0),5);
+    assert.equal(trackFrame(composite,'thinking',0),4);
+    assert.equal(trackFrame(composite,'success',0),3);
+    assert.equal(trackFrame(composite,'idle',180,4,{talk:1}),2);
+  }
+});
+
+test('new full-body atlases include six registered frames with a genuine higher tier', async()=>{
+  const fs=require('node:fs');
+  const {validateManifest,chooseVariant}=await load('character-assets.js');
+  for(const id of ['mochi','lili','luna','pudding']){
+    const root=path.join(__dirname,'../assets/characters',id,'full-hd');
+    const manifest=validateManifest(JSON.parse(fs.readFileSync(path.join(root,'manifest.json'))));
+    const tier=chooseVariant(manifest.variants,1.5,2048);
+    assert.equal(tier.frameWidth,640);
+    assert.match(manifest.sourceDetail,/no upscaling/);
+    assert.equal(new Set(tier.layers[0].frames.map(f=>`${f.page}/${f.x}/${f.y}`)).size,6);
+    for(const page of tier.pages)assert.ok(fs.statSync(path.join(root,page.file)).size>1000);
+  }
+});
+
+test('Luna uses the new face for both views and every expression and speech track', async()=>{
+  const fs=require('node:fs');
+  const luna=require('../assets/characters/catalog.json').find(c=>c.id==='luna');
+  const {validateManifest}=await load('character-assets.js');
+  for(const key of ['spriteManifest','bustManifest']) {
+    assert.match(luna[key],/luna\/face-0\.22-(full|bust)\/manifest.json$/);
+    const file=path.join(__dirname,'../assets/characters',luna[key]);
+    const manifest=validateManifest(JSON.parse(fs.readFileSync(file)));
+    for(const variant of manifest.variants) {
+      const layer=variant.layers[0];
+      assert.equal(layer.frames.length,12);
+      for(const state of ['idle','blink','thinking','attention','success','error','sleep','wave',
+        'talkNeutral','talkPrepare','talkSoft','talkRound','talkEmphasis','talkRest'])assert.ok(layer.tracks[state]?.length,state);
+      for(const page of variant.pages)assert.ok(fs.statSync(path.join(path.dirname(file),page.file)).size>1000);
+    }
+  }
+});

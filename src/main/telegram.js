@@ -7,7 +7,7 @@
 
 const API = 'https://api.telegram.org';
 
-function createTelegram({ getToken, getChat, setChat, onMessage, log = () => {}, fetcher = fetch }) {
+function createTelegram({ getToken, getChat, getAllowedUsers, setChat, onMessage, log = () => {}, fetcher = fetch }) {
   let running = false, offset = 0, pairing = null, controller = null;
 
   async function call(method, params = {}, { form = null, signal } = {}) {
@@ -41,24 +41,30 @@ function createTelegram({ getToken, getChat, setChat, onMessage, log = () => {},
     const chatId = msg?.chat?.id;
     if (!chatId) return;
     const text = (update.message?.text || '').trim();
-    if (getChat() !== chatId) {
+    const sender=update.callback_query?.from||update.message?.from,userId=sender?.id;
+    if(getAllowedUsers && (!Number.isSafeInteger(userId)||userId<=0||sender.is_bot))return;
+    if(getAllowedUsers && text==='/whoami')return send(chatId,`Telegram User ID: ${userId}`);
+    if (getChat() !== chatId || (pairing && text.replace(/^\/start\s*/, '')===pairing.code)) {
       if (pairing && Date.now() < pairing.until && text.replace(/^\/start\s*/, '') === pairing.code) {
         pairing = null;
-        setChat(chatId);
+        setChat(chatId,userId);
         await send(chatId, 'เชื่อมกับ Uncle Desktop แล้ว 🎉 พิมพ์ อัดเสียง หรือส่งรูปมาได้เลย · /help ดูคำสั่ง');
+        return;
       }
-      return; // not yours: dropped, unread
+      else if(!getAllowedUsers || !getAllowedUsers().includes(userId))return;
     }
+    if(getAllowedUsers && !getAllowedUsers().includes(userId))return;
+    const deliver=event=>onMessage({...event,userId});
     if (update.callback_query) {
       await call('answerCallbackQuery', { callback_query_id: update.callback_query.id }).catch(() => {});
-      return onMessage({ kind: 'callback', data: update.callback_query.data, chatId });
+      return deliver({ kind: 'callback', data: update.callback_query.data, chatId });
     }
     const m = update.message;
-    if (m.voice || m.audio) return onMessage({ kind: 'voice', fileId: (m.voice || m.audio).file_id, mime: (m.voice || m.audio).mime_type || 'audio/ogg', chatId, caption: m.caption || '' });
-    if (m.photo?.length) return onMessage({ kind: 'photo', fileId: m.photo.at(-1).file_id, mime: 'image/jpeg', chatId, caption: m.caption || '' });
-    if (m.document?.mime_type?.startsWith('image/')) return onMessage({ kind: 'photo', fileId: m.document.file_id, mime: m.document.mime_type, chatId, caption: m.caption || '' });
-    if (m.video || m.video_note || m.animation) { const v = m.video || m.video_note || m.animation; return onMessage({ kind: 'video', fileId: v.file_id, mime: v.mime_type || 'video/mp4', size: v.file_size || 0, chatId, caption: m.caption || '' }); }
-    if (text) return onMessage({ kind: 'text', text, chatId });
+    if (m.voice || m.audio) return deliver({ kind: 'voice', fileId: (m.voice || m.audio).file_id, mime: (m.voice || m.audio).mime_type || 'audio/ogg', chatId, caption: m.caption || '' });
+    if (m.photo?.length) return deliver({ kind: 'photo', fileId: m.photo.at(-1).file_id, mime: 'image/jpeg', chatId, caption: m.caption || '' });
+    if (m.document?.mime_type?.startsWith('image/')) return deliver({ kind: 'photo', fileId: m.document.file_id, mime: m.document.mime_type, chatId, caption: m.caption || '' });
+    if (m.video || m.video_note || m.animation) { const v = m.video || m.video_note || m.animation; return deliver({ kind: 'video', fileId: v.file_id, mime: v.mime_type || 'video/mp4', size: v.file_size || 0, chatId, caption: m.caption || '' }); }
+    if (text) return deliver({ kind: 'text', text, chatId });
     return send(chatId, 'ยังรับข้อความแบบนี้ไม่ได้ ส่งเป็นข้อความ เสียง รูป หรือวิดีโอนะ');
   }
 

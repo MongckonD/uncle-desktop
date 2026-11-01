@@ -1,5 +1,6 @@
 import { CharacterImport } from './character-import.js';
 import { createCharacterRenderer } from './character-renderer.js';
+import { loadCharacterSource, assetURL } from './character-assets.js';
 const COPY = {
   th: { title: 'เลือกเพื่อนบนเดสก์ท็อป', subtitle: 'ดูหน้าตาก่อนเลือก เปลี่ยนตัวได้ทุกเมื่อ', original: 'ตัวละครต้นฉบับ', game: 'ตัวละครจากเกมของคุณ', active: 'กำลังใช้งาน', select: 'ใช้ตัวละครนี้', current: 'กำลังใช้ตัวนี้อยู่', close: 'ปิด', loading: 'กำลังเปลี่ยน…', failed: 'เปลี่ยนไม่สำเร็จ ลองอีกครั้ง' },
   en: { title: 'Choose your desktop companion', subtitle: 'Preview a character before choosing. Switch anytime.', original: 'Original character', game: 'Your game character', active: 'Currently active', select: 'Use this character', current: 'Already active', close: 'Close', loading: 'Switching…', failed: 'Could not switch. Please try again.' },
@@ -164,6 +165,8 @@ export class CharacterPicker {
   }
 
   async preview(character) {
+    // Gallery thumbnails never decode all characters' animation pages.
+    if(character.thumbnail || character.spriteManifest) return assetURL(character,character.thumbnail || character.portrait);
     const image = new Image();
     image.src = character.custom ? character.atlas : `../../assets/characters/${character.atlas}`;
     await image.decode();
@@ -192,10 +195,8 @@ export class CharacterPicker {
     this.previewRenderer = null;
     this.previewCanvas.getContext('2d').clearRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
     if (!character) return;
-    const image = new Image();
-    image.src = character.custom ? character.atlas : `../../assets/characters/${character.atlas}`;
     try {
-      await image.decode();
+      const image = await loadCharacterSource(character);
       if (request !== this.previewRequest || !this.open) return;
       if (character.renderer === 'capri') {
         // Capri's shader needs the live actor pose. Use its original artwork
@@ -212,7 +213,7 @@ export class CharacterPicker {
       }
       this.previewRenderer = createCharacterRenderer(this.previewCanvas, image, character);
       this.previewRenderer.setFraming?.(this.pendingFraming);
-      this.previewRenderer.resize(0.72);
+      this.previewRenderer.resize(Math.min(0.72, 300/532, (this.previewCanvas.parentElement.clientWidth || 265)/432));
     } catch { if (request === this.previewRequest) this.status.textContent = this.t.failed; }
   }
 
@@ -221,6 +222,10 @@ export class CharacterPicker {
     if (!this.open) return;
     const draw = () => {
       if (!this.open) return;
+      if(this.previewRenderer?.resize && this.previewDpr !== window.devicePixelRatio){
+        this.previewDpr=window.devicePixelRatio;
+        this.previewRenderer.resize(Math.min(0.72,300/532,(this.previewCanvas.parentElement.clientWidth||265)/432));
+      }
       const mode = this.previewState === 'thinking' ? 'work' : this.previewState === 'sleep' ? 'sleep' : 'idle';
       this.previewRenderer?.draw({}, { mode, reaction: this.previewState === 'idle' ? '' : this.previewState });
       this.previewAnimation = requestAnimationFrame(draw);

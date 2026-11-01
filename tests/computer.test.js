@@ -3,6 +3,15 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const {actionFrom,needsConfirmation,createComputer}=require('../src/main/computer');
 const view={app:{window:11,title:'Test editor',process:'editor',x:0,y:0,width:800,height:600},targets:[{id:1,role:'Edit',name:'Text',value:'สวัสดี',x:10,y:10},{id:2,role:'Button',name:'Send',value:'',x:10,y:80}]};
 const wait=()=>new Promise(r=>setTimeout(r,10));
+
+test('Windows volume prelude finishes before browser planning and still obeys permission gates',async()=>{
+ const order=[];let last;
+ const native={request:async a=>{if(a.action==='click')order.push('browser click');return a.action==='read'?structuredClone(view):a.action==='windows'?[view.app]:{};},stop(){}};
+ let plans=0;const c=createComputer({native,system:async()=>{order.push('windows volume');return 'volume verified';},decide:async()=>JSON.stringify(plans++?{tool:'done',evidence:'สวัสดี',reason:'verified'}:{tool:'click',target:2,reason:'unmute browser'}),notify:s=>{last=s;}});
+ const firstAction={tool:'media',action:'unmute',reason:'Windows first'};
+ c.start({task:'unmute both',consent:true,firstAction,security:'blackwall'});while(c.busy)await wait();assert.deepEqual(order,['windows volume','browser click']);assert.equal(last.status,'done');
+ order.length=0;c.start({task:'unmute both',consent:true,firstAction,security:'lockdown'});while(c.busy)await wait();assert.deepEqual(order,[]);assert.equal(last.status,'error');
+});
 test('computer actions reject invented tools, console keys, invalid URLs and control-character typing',()=>{
  for(const a of [{tool:'shell',reason:'test'},{tool:'key',text:'WIN+R',reason:'test'},{tool:'type',text:'x\u0001run',reason:'test'},{tool:'open_website',url:'file:///C:/a',reason:'test'},{tool:'done',reason:'test'}])assert.throws(()=>actionFrom(JSON.stringify(a)));
  assert.equal(actionFrom('{"tool":"type","text":"สวัสดี","target":1,"reason":"พิมพ์ไทย"}').text,'สวัสดี');

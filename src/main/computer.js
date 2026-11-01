@@ -137,7 +137,7 @@ function createComputer({native,decide,openApp,openSite,picture,system,verifyVis
         emit(current,{status:'running',message:'กำลังอ่านหน้าต่างและวางขั้นตอนถัดไป…'});
         view=await native.request({action:'read',window:0},signal);const windows=await native.request({action:'windows'},signal);
         const image=current.images&&!view.targets.some(t=>t.secret)?await picture?.(view,signal):null;
-        const a=current.directAction ? i===0?current.directAction:{tool:"done",reason:history.at(-1)?.receipt||"ส่งคำสั่งแล้ว โปรดตรวจผลในแอป",evidence:history.at(-1)?.receipt||view.app.title} : actionFrom(await decide({prompt:PROMPT,task:current.task,view,windows,history:history.slice(-12),notes,image},signal));
+        const a=current.firstAction && i===0?current.firstAction:current.directAction ? i===0?current.directAction:{tool:"done",reason:history.at(-1)?.receipt||"ส่งคำสั่งแล้ว โปรดตรวจผลในแอป",evidence:history.at(-1)?.receipt||view.app.title} : actionFrom(await decide({prompt:PROMPT,task:current.task,view,windows,history:history.slice(-12),notes,image},signal));
         if(signal.aborted||job!==current)return;
         if(current.readOnly&&!['read','wait','wait_for','note','ask','done'].includes(a.tool))throw Error('งานอ่านหน้าจอไม่อนุญาตให้คลิกหรือแก้ไข');
         if(a.tool==='type'){a.text=a.text.replace(/\$([a-zA-Z][a-zA-Z0-9_]*)/g,(_,name)=>{if(!(name in notes))throw new Error('ไม่พบบันทึก '+name);return notes[name];});actionFrom(JSON.stringify(a));}
@@ -190,9 +190,9 @@ function createComputer({native,decide,openApp,openSite,picture,system,verifyVis
     }catch(e){if(job===current&&!signal.aborted)emit(current,{status:'error',message:e.message});}
     finally{clearTimeout(current.deadline);clearTimeout(current.timer);if(job===current){native.stop();job=null;}}
   }
-  function start({task,consent,images=false,voice=false,directAction=null,readOnly=false,security='guarded',switches=null}){
+  function start({task,consent,images=false,voice=false,directAction=null,firstAction=null,readOnly=false,security='guarded',switches=null}){
     if(job)throw new Error('มีงานกำลังทำอยู่');if(typeof task!=='string'||!task.trim()||task.length>2000||consent!==true||typeof images!=='boolean'||typeof voice!=='boolean'||!SECURITY.includes(security))throw new Error('ระบุงานและอนุญาตอ่านหน้าจอก่อนเริ่ม');
-    const current={task:task.trim(),inbox:[],images,readOnly:readOnly||security==='lockdown',security,switches:switches||LEVELS[security],directAction:directAction?actionFrom(JSON.stringify(directAction)):null,controller:new AbortController(),state:{id:randomUUID(),voice,status:'running',steps:[],message:'เริ่มงาน…'}};job=current;current.deadline=setTimeout(()=>{if(job===current)stop();},600000);emit(current,{});run(current);return current.state.id;
+    const current={task:task.trim(),inbox:[],images,readOnly:readOnly||security==='lockdown',security,switches:switches||LEVELS[security],directAction:directAction?actionFrom(JSON.stringify(directAction)):null,firstAction:firstAction?actionFrom(JSON.stringify(firstAction)):null,controller:new AbortController(),state:{id:randomUUID(),voice,status:'running',steps:[],message:'เริ่มงาน…'}};job=current;current.deadline=setTimeout(()=>{if(job===current)stop();},600000);emit(current,{});run(current);return current.state.id;
   }
   // something you say while she works: she says got it and takes it into her next step
   function tell(text){if(typeof text!=='string'||!text.trim()||text.length>1000)throw new Error('ข้อความไม่ถูกต้อง');if(!job)return false;job.inbox.push(text.trim());emit(job,{message:'รับทราบ: '+text.trim()});return true;}

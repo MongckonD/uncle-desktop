@@ -1,5 +1,9 @@
 import { clamp, lerp, reducedMotion } from './util.js';
 import { SpriteRenderer, SPRITE as CAPRI } from './sprite.js';
+import { dimensions, atlasRect, chooseVariant, gpuTextureLimit, atlasCache, assetURL } from './character-assets.js';
+import { CharacterRig, trackFrame, applyPose } from './character-rig.js';
+import { ConversationMotion } from './conversation-motion.js';
+import { TorsoMotion, drawTorsoMotion, torsoRegions } from './torso-motion.js';
 
 // Use one coordinate system for drawing, dragging, collision and effect anchors.
 export const SPRITE = {
@@ -20,6 +24,11 @@ function talkStretch(ctx, renderer, talk = 0) {
 }
 
 export const ANIMATION_ROWS = Object.freeze({ idle: 0, thinking: 1, attention: 2, success: 3, error: 4, sleep: 5 });
+
+// Blend only pose changes. This cannot invent intermediate limb geometry.
+export function poseBlend(elapsed, still = false, duration = 180) {
+  return still ? 0 : 1 - clamp(elapsed / clamp(duration, 40, 250), 0, 1);
+}
 
 export function animationFor({ mode = 'idle', act = '', reaction = '' } = {}) {
   if (mode === 'alert') return 'attention';
@@ -46,6 +55,17 @@ export function sourceRect(character, framing = 'full') {
     : { x: 0, y: 0, width: SPRITE.width, height: SPRITE.height };
 }
 
+export function viewCrop(character, framing, source) {
+  if (framing === 'bust' && source?.bust) return source.bust.manifest.crop || sourceRect(character, 'full');
+  if (framing === 'full' && source?.manifest.crop) return source.manifest.crop;
+  if (framing === 'bust' && source?.manifest.crop) {
+    const full=source.manifest.crop, crop=sourceRect(character, 'bust');
+    return {x:full.x+crop.x*full.width/320,y:full.y+crop.y*full.height/420,
+      width:crop.width*full.width/320,height:crop.height*full.height/420};
+  }
+  return sourceRect(character, framing);
+}
+
 export function speakingFrame(state, elapsed, fps, still, talk, expressive) {
   // Authored attention frames have closed, open and rounded mouths. This is
   // audio-driven expression switching, not phoneme-level lip sync.
@@ -57,7 +77,10 @@ export function speakingFrame(state, elapsed, fps, still, talk, expressive) {
 
 export class CharacterRenderer {
   constructor(canvas, image, character) {
-    if (image.naturalWidth !== character.columns * SPRITE.width || image.naturalHeight !== character.rows * SPRITE.height) {
+    const native = dimensions(character);
+    this.source = image.manifest ? image : null;
+    if(this.source)this.pixels=this.source.initialPixels;
+    if (!this.source && (image.naturalWidth !== character.columns * native.width || image.naturalHeight !== character.rows * native.height)) {
       throw new Error(`Invalid character atlas: ${character.id}`);
     }
     this.canvas = canvas;
@@ -68,6 +91,15 @@ export class CharacterRenderer {
     this.frameCanvas.width = SPRITE.width;
     this.frameCanvas.height = SPRITE.height;
     this.frameCtx = this.frameCanvas.getContext('2d', { willReadFrequently: true });
+    this.rig = new CharacterRig();
+    this.motion = new ConversationMotion(character.id,{orderedSpeech:!!character.orderedSpeech});
+    this.torso = character.secondaryMotion ? new TorsoMotion(character.secondaryMotion) : null;
+    if (this.torso) this.torsoCanvas=document.createElement('canvas');
+    this.composite = document.createElement('canvas');
+    this.compositeCtx = this.composite.getContext('2d');
+    this.previousComposite = document.createElement('canvas');
+    this.previousComposite.width = this.previousComposite.height = 1;
+    this.transitionAt = -Infinity;
     this.state = 'idle';
     this.started = performance.now();
     this.frame = -1;
@@ -80,15 +112,22 @@ export class CharacterRenderer {
     const { width, height } = SPRITE;
     this.frameCtx.clearRect(0, 0, width, height);
     const crop = sourceRect(this.character, this.framing);
-    this.frameCtx.drawImage(this.image, frame % 4 * width + crop.x, Math.floor(frame / 4) * height + crop.y, crop.width, crop.height, 0, 0, width, height);
+    if (this.source) return; // Updated atomically after all layers are ready.
+    const rect = atlasRect(frame, this.character, crop);
+    this.frameCtx.imageSmoothingEnabled = true;
+    this.frameCtx.imageSmoothingQuality = 'high';
+    this.frameCtx.drawImage(this.image, rect.x, rect.y, rect.width, rect.height, 0, 0, width, height);
     this.pixels = this.frameCtx.getImageData(0, 0, width, height).data;
   }
 
   setFraming(framing) {
+    this.torso?.reset();
     this.framing = framing === 'bust' ? 'bust' : 'full';
     const frame = this.frame;
     this.frame = -1;
     this.selectFrame(frame);
+    this.compositeKey = null;
+    this.transitionAt = -Infinity;
   }
 
   resize(scale) {
@@ -112,21 +151,153 @@ export class CharacterRenderer {
       this.started = now;
     }
     this.selectFrame(speakingFrame(state, now - this.started, this.character.fps, reducedMotion.matches, context.talk, this.character.expressive));
+    const motion = this.motion.update(now, {...context, state, still: reducedMotion.matches || this.character.stillImage});
+    const secondary = this.torso?.update(now, {...context,...motion,state,
+      angle:motion.angle+(context.bodyAngle||0),still:reducedMotion.matches});
+    if (this.source) this.prepareComposite(now, {...context, ...motion});
     const { ctx, canvas } = this;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     const scale = this.scale * (window.devicePixelRatio || 1);
     ctx.scale(scale, scale);
-    talkStretch(ctx, this, context.talk);
+    ctx.translate(motion.danceX,motion.danceY);
+    if (!this.source?.manifest.rigged && !this.character.stillImage) {
+      const x=SPRITE.pad+SPRITE.feet.x,y=SPRITE.pad+SPRITE.feet.y;
+      ctx.translate(x,y);ctx.rotate(motion.angle);ctx.scale(1,1+motion.breath);ctx.translate(-x,-y);
+    }
     ctx.globalAlpha = clamp((p.alpha ?? 1) * (1 - (p.dissolve || 0)), 0, 1);
     ctx.translate(SPRITE.pad + SPRITE.width / 2, SPRITE.pad);
     ctx.scale(Math.max(0.01, 1 - (p.collapse || 0)), 1);
     // From the atlas, not frameCanvas: a bust crop resampled twice comes out blurry.
-    const crop = sourceRect(this.character, this.framing), f = this.frame;
-    ctx.drawImage(this.image, f % 4 * SPRITE.width + crop.x, Math.floor(f / 4) * SPRITE.height + crop.y, crop.width, crop.height, -SPRITE.width / 2, 0, SPRITE.width, SPRITE.height);
+    const dedicatedBust=this.source?.bust && this.framing==='bust';
+    const crop = viewCrop(this.character, this.framing, this.source), f = this.frame;
+    if (this.source) {
+      if (this.compositeReady && this.compositeView === (dedicatedBust ? 'bust' : 'full')) {
+        const ratio=this.composite.width / SPRITE.width;
+        const blend = poseBlend(now - this.transitionAt, reducedMotion.matches, this.character.poseBlendMs);
+        const opacity = ctx.globalAlpha;
+        if(this.torso) {
+          this.drawSecondary(ctx,crop,blend,secondary,dedicatedBust);
+        } else {
+        ctx.globalAlpha = opacity * (1-blend);
+        ctx.drawImage(this.composite,crop.x*ratio,crop.y*ratio,crop.width*ratio,crop.height*ratio,-160,0,320,420);
+        if (blend && this.previousComposite.width > 1) {
+          const previousRatio = this.previousComposite.width / SPRITE.width;
+          ctx.globalAlpha = opacity * blend;
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.drawImage(this.previousComposite,crop.x*previousRatio,crop.y*previousRatio,crop.width*previousRatio,crop.height*previousRatio,-160,0,320,420);
+        }
+        }
+      }
+    } else {
+      const rect=atlasRect(f,this.character,crop);
+      ctx.drawImage(this.image,rect.x,rect.y,rect.width,rect.height,-160,0,320,420);
+    }
     ctx.restore();
   }
+
+  drawSecondary(ctx,crop,blend,offsets,bust) {
+    const image=this.torsoCanvas,w=this.composite.width,h=this.composite.height;
+    if(image.width!==w || image.height!==h){image.width=w;image.height=h;}
+    const stage=image.getContext('2d');stage.setTransform(1,0,0,1,0,0);
+    stage.clearRect(0,0,w,h);stage.imageSmoothingEnabled=true;stage.imageSmoothingQuality='high';
+    stage.globalCompositeOperation='source-over';stage.globalAlpha=1-blend;
+    const ratio=w/320;
+    stage.drawImage(this.composite,crop.x*ratio,crop.y*ratio,crop.width*ratio,crop.height*ratio,0,0,w,h);
+    if(blend && this.previousComposite.width>1) {
+      const previousRatio=this.previousComposite.width/320;
+      stage.globalAlpha=blend;stage.globalCompositeOperation='lighter';
+      stage.drawImage(this.previousComposite,crop.x*previousRatio,crop.y*previousRatio,crop.width*previousRatio,crop.height*previousRatio,0,0,w,h);
+    }
+    const profile=torsoRegions(this.character.secondaryMotion,bust?'bust':'full',this.compositeFrame);
+    const regions=profile.map(r=>({x:(r.x-crop.x)*320/crop.width,y:(r.y-crop.y)*420/crop.height,
+      rx:r.rx*320/crop.width,ry:r.ry*420/crop.height}));
+    const gain=regions.length?Math.min(1.5,regions.reduce((n,r)=>n+r.rx,0)/regions.length/24):1;
+    const boost=clamp(this.character.secondaryMotion.visualGain??1,1,2);
+    const displacements=offsets.map(o=>({x:o.x*gain*boost,y:o.y*gain*boost}));
+    ctx.save();ctx.translate(-160,0);drawTorsoMotion(ctx,image,regions,displacements);ctx.restore();
+  }
+
+  prepareComposite(now, context) {
+    if(this.disposed || this.pendingComposite)return;
+    const view=this.framing==='bust' && this.source.bust ? this.source.bust : this.source;
+    const viewName=view===this.source?'full':'bust';
+    const density=(this.scale||1)*(window.devicePixelRatio||1)*320/viewCrop(this.character,this.framing,this.source).width;
+    const variant=chooseVariant(view.manifest.variants,density,gpuTextureLimit());
+    if(!variant){this.fallback();return;}
+    const state=this.state;
+    const rigContext={...context,state,frame:this.frame,still:reducedMotion.matches};
+    const elapsed=now-this.started;
+    const selected=variant.layers.map(layer=>({layer,frame:layer.frames[trackFrame(layer,state,elapsed,this.character.fps,rigContext)]}));
+    const key=JSON.stringify([variant.frameWidth,viewName,this.framing,selected.map(s=>s.layer.frames.indexOf(s.frame))]);
+    if(!view.manifest.rigged && this.compositeKey===key)return;
+    const pages=selected.map(s=>({...variant.pages[s.frame.page],url:new URL(variant.pages[s.frame.page].file,view.url).href}));
+    this.pendingComposite=true;
+    const source=this.source;
+    atlasCache.group(pages,images=>{
+      if(this.disposed || source!==this.source)return;
+      const {frameWidth:w,frameHeight:h}=variant,ratio=w/320;
+      if (!view.manifest.rigged && this.compositeReady && this.compositeView === viewName && this.compositeKey !== key && !reducedMotion.matches) {
+        this.previousComposite.width = this.composite.width;
+        this.previousComposite.height = this.composite.height;
+        this.previousComposite.getContext('2d').drawImage(this.composite, 0, 0);
+        this.transitionAt = performance.now();
+      } else if (this.compositeView !== viewName || reducedMotion.matches) {
+        this.transitionAt = -Infinity;
+      }
+      if(this.composite.width!==w || this.composite.height!==h){this.composite.width=w;this.composite.height=h;}
+      const ctx=this.compositeCtx;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,w,h);
+      ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+      ctx.save();ctx.scale(ratio,ratio);ctx.beginPath();ctx.rect(0,0,320,420);ctx.clip();
+      const motion=this.rig.update(now,rigContext),poses=new Map();
+      for(const {layer,frame} of selected){
+        const pose=this.rig.pose(layer,motion,rigContext),anchor=frame.anchor||[0,0];
+        pose.x+=anchor[0];pose.y+=anchor[1];poses.set(layer.id,pose);
+      }
+      for(let i=0;i<selected.length;i++) {
+        const {layer,frame}=selected[i];ctx.save();
+        // Optional authored safe region keeps spring-driven cloth inside its
+        // outer silhouette. It is not a collision solver for flattened art.
+        if(layer.clip){ctx.beginPath();ctx.rect(...layer.clip);ctx.clip();}
+        applyPose(ctx,layer,poses,variant.layers);
+        ctx.drawImage(images[i],frame.x,frame.y,w,h,0,0,320,420);
+        ctx.restore();
+      }
+      ctx.restore();
+      this.compositeReady=true;this.compositeKey=key;this.compositeView=viewName;this.activeResolution=[w,h];
+      this.compositeFrame=selected[0].layer.frames.indexOf(selected[0].frame);
+      // Hit-testing alone is low resolution; the visible image never passes
+      // through this mask canvas.
+      const c=viewCrop(this.character,this.framing,source);
+      this.frameCtx.clearRect(0,0,320,420);
+      this.frameCtx.drawImage(this.composite,c.x*ratio,c.y*ratio,c.width*ratio,c.height*ratio,0,0,320,420);
+      this.pixels=this.frameCtx.getImageData(0,0,320,420).data;
+    }).catch(error=>{console.warn('[sprite] atlas load failed',error.message);this.fallback();})
+      .finally(()=>{this.pendingComposite=false;});
+  }
+
+  async fallback() {
+    if(this.fallingBack||this.disposed)return;
+    this.fallingBack=true;
+    try {
+      const image=new Image();image.src=assetURL(this.character,this.character.atlas);await image.decode();
+      if(this.disposed)return;
+      const size=dimensions(this.character);
+      if(image.naturalWidth!==this.character.columns*size.width||image.naturalHeight!==this.character.rows*size.height)throw new Error('Legacy fallback dimensions mismatch');
+      this.source=null;this.image=image;const frame=this.frame;this.frame=-1;this.selectFrame(frame);
+    }catch(error){console.error('[sprite] no usable fallback',error.message);}
+  }
+
+  async ready() {
+    if(!this.source)return;
+    this.prepareComposite(performance.now(),{});
+    // Initial frame is needed for the actor's initial collision hull.
+    await atlasCache.queue;
+    if(this.fallingBack && !this.pixels)throw new Error('Could not initialize sprite');
+  }
+
+  dispose() {this.disposed=true;this.composite.width=this.composite.height=1;this.previousComposite.width=this.previousComposite.height=1;this.frameCanvas.width=this.frameCanvas.height=1;if(this.torsoCanvas)this.torsoCanvas.width=this.torsoCanvas.height=1;this.image=null;this.source=null;}
 }
 
 // Keep Capri's original shader and acting; copy its offscreen drawing into the shared canvas.

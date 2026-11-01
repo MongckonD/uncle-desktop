@@ -1,9 +1,20 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
+
+test('Thai volume requests distinguish Windows changes and browser unmute',async()=>{
+ const {volumeCommand,computerTask}=await import('../src/renderer/js/computer-intent.js');
+ for(const [text,action] of [['เพิ่มเสียงหน่อย','volume_up'],['ลดเสียงหน่อย','volume_down'],['ปิดเสียง Windows','mute'],['เปิดเสียง Windows','unmute']]){
+  assert.equal(volumeCommand(text).action,action);assert.equal(volumeCommand(text).browser,false);assert.ok(computerTask(text));
+ }
+ const both=volumeCommand('เปิดเสียงอีกหน่อยมันไม่ค่อยได้ยิน');assert.equal(both.action,'volume_up');assert.equal(both.windows,true);assert.equal(both.browser,true);
+ assert.equal(volumeCommand('เปิดเสียงเบราว์เซอร์').windows,false);
+ assert.equal(volumeCommand('ตั้งเสียง ๔๐ เปอร์เซ็นต์').level,40);
+ assert.equal(volumeCommand('ตั้งเสียง 999 เปอร์เซ็นต์'),null);assert.equal(computerTask('อย่าเปิดเสียง'),null);
+});
 test('Thai multi-step and desktop commands route to jobs without a magic prefix',async()=>{
  const {computerTask}=await import('../src/renderer/js/computer-intent.js');
  for(const phrase of ['เปิด Notepad แล้วพิมพ์ สวัสดี','ช่วยลากไฟล์ไปที่โฟลเดอร์','กด Ctrl+A','ปรับเสียงเป็น 40 เปอร์เซ็นต์','ล็อกหน้าจอ','กำลังเล่นเพลงอะไร','ควบคุมเครื่อง: เปิดเว็บแล้วค้นหาแมว'])assert.ok(computerTask(phrase),phrase);
- for(const phrase of ['อย่าเปิดโปรแกรม','วิธีลากไฟล์ทำยังไง','อธิบายการควบคุมเครื่อง','วันนี้เป็นอย่างไร','เตือนฉันอีกห้านาที'])assert.equal(computerTask(phrase),null,phrase);
+ for(const phrase of ['อย่าเปิดโปรแกรม','อย่าเปิดเพลง Paradox','ช่วยอย่าเปิดเพลง','เปิดเพลงทำยังไง','วิธีลากไฟล์ทำยังไง','อธิบายการควบคุมเครื่อง','วันนี้เป็นอย่างไร','เตือนฉันอีกห้านาที'])assert.equal(computerTask(phrase),null,phrase);
 });
 test('voice executes a multi-step request through the computer bridge',async()=>{
  const {Listening}=await import('../src/renderer/js/listening.js');const v=Object.create(Listening.prototype);let received;

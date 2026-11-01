@@ -1,0 +1,187 @@
+{
+  "version": 2,
+  "logicalSize": [
+    320,
+    420
+  ],
+  "rigged": false,
+  "sourceDetail": "Six new full-body poses, true figure height 779px; no upscaling",
+  "variants": [
+    {
+      "frameWidth": 320,
+      "frameHeight": 420,
+      "pages": [
+        {
+          "file": "320-000.webp",
+          "width": 1296,
+          "height": 848
+        }
+      ],
+      "layers": [
+        {
+          "id": "body",
+          "role": "composite",
+          "tracks": {
+            "idle": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "blink": [
+              0,
+              1,
+              0
+            ],
+            "thinking": [
+              2
+            ],
+            "attention": [
+              3
+            ],
+            "success": [
+              4
+            ],
+            "error": [
+              2
+            ],
+            "sleep": [
+              5
+            ],
+            "wave": [
+              3
+            ],
+            "talk": [
+              0,
+              3
+            ]
+          },
+          "frames": [
+            {
+              "page": 0,
+              "x": 2,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 326,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 650,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 974,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 2,
+              "y": 426
+            },
+            {
+              "page": 0,
+              "x": 326,
+              "y": 426
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "frameWidth": 640,
+      "frameHeight": 840,
+      "pages": [
+        {
+          "file": "640-000.webp",
+          "width": 1932,
+          "height": 1688
+        }
+      ],
+      "layers": [
+        {
+          "id": "body",
+          "role": "composite",
+          "tracks": {
+            "idle": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "blink": [
+              0,
+              1,
+              0
+            ],
+            "thinking": [
+              2
+            ],
+            "attention": [
+              3
+            ],
+            "success": [
+              4
+            ],
+            "error": [
+              2
+            ],
+            "sleep": [
+              5
+            ],
+            "wave": [
+              3
+            ],
+            "talk": [
+              0,
+              3
+            ]
+          },
+          "frames": [
+            {
+              "page": 0,
+              "x": 2,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 646,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 1290,
+              "y": 2
+            },
+            {
+              "page": 0,
+              "x": 2,
+              "y": 846
+            },
+            {
+              "page": 0,
+              "x": 646,
+              "y": 846
+            },
+            {
+              "page": 0,
+              "x": 1290,
+              "y": 846
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

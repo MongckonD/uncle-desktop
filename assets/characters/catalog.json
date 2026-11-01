@@ -10,7 +10,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "angry-boy/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "blacky",
@@ -23,7 +26,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "blacky/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "bald-man",
@@ -36,7 +42,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "bald-man/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "lazy-boy",
@@ -49,7 +58,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "lazy-boy/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "angry-guy",
@@ -62,7 +74,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "angry-guy/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "drunk-uncle",
@@ -75,7 +90,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "drunk-uncle/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "vulture",
@@ -88,7 +106,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "vulture/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "chubby-girl",
@@ -101,7 +122,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "chubby-girl/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "cute-girl",
@@ -114,7 +138,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "cute-girl/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "fatty-girl",
@@ -127,7 +154,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "fatty-girl/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "pinky",
@@ -140,7 +170,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 4
+    "fps": 4,
+    "spriteManifest": "pinky/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "mira",
@@ -153,7 +186,10 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 2
+    "fps": 2,
+    "spriteManifest": "mira/motion-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseManifest": null
   },
   {
     "id": "mochi",
@@ -166,7 +202,506 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 2
+    "fps": 4,
+    "spriteManifest": "mochi/sequence-30-full/manifest.json",
+    "bustManifest": "mochi/sequence-30-bust/manifest.json",
+    "expressive": true,
+    "fullHD": true,
+    "motionBaseManifest": "mochi/sequence-30-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseBustManifest": "mochi/sequence-30-bust/manifest.json",
+    "secondaryMotion": {
+      "mass": 1.1,
+      "stiffness": 34,
+      "damping": 5.5,
+      "max": 7,
+      "strength": 1.8,
+      "drive": 0.028,
+      "full": [
+        {
+          "x": 153,
+          "y": 249,
+          "rx": 13,
+          "ry": 11
+        },
+        {
+          "x": 171,
+          "y": 249,
+          "rx": 13,
+          "ry": 11
+        }
+      ],
+      "bust": [
+        {
+          "x": 144,
+          "y": 338,
+          "rx": 20,
+          "ry": 18
+        },
+        {
+          "x": 180,
+          "y": 338,
+          "rx": 20,
+          "ry": 18
+        }
+      ],
+      "fullFrames": {
+        "24": [
+          {
+            "x": 153,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          },
+          {
+            "x": 171,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          }
+        ],
+        "25": [
+          {
+            "x": 153,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          },
+          {
+            "x": 171,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          }
+        ],
+        "26": [
+          {
+            "x": 153,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          },
+          {
+            "x": 171,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          }
+        ],
+        "27": [
+          {
+            "x": 153,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          },
+          {
+            "x": 171,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          }
+        ],
+        "28": [
+          {
+            "x": 153,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          },
+          {
+            "x": 171,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          }
+        ],
+        "29": [
+          {
+            "x": 153,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          },
+          {
+            "x": 171,
+            "y": 260,
+            "rx": 13,
+            "ry": 11
+          }
+        ]
+      },
+      "bustFrames": {
+        "4": [
+          {
+            "x": 153,
+            "y": 328,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 185,
+            "y": 328,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "5": [
+          {
+            "x": 153,
+            "y": 328,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 185,
+            "y": 328,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "6": [
+          {
+            "x": 153,
+            "y": 328,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 185,
+            "y": 328,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "7": [
+          {
+            "x": 153,
+            "y": 328,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 185,
+            "y": 328,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "8": [
+          {
+            "x": 148,
+            "y": 330,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 180,
+            "y": 330,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "9": [
+          {
+            "x": 148,
+            "y": 330,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 180,
+            "y": 330,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "10": [
+          {
+            "x": 148,
+            "y": 330,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 180,
+            "y": 330,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "11": [
+          {
+            "x": 148,
+            "y": 330,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 180,
+            "y": 330,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "12": [
+          {
+            "x": 147,
+            "y": 320,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 320,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "13": [
+          {
+            "x": 147,
+            "y": 320,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 320,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "14": [
+          {
+            "x": 147,
+            "y": 320,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 320,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "15": [
+          {
+            "x": 147,
+            "y": 320,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 320,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "16": [
+          {
+            "x": 139,
+            "y": 339,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 177,
+            "y": 339,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "17": [
+          {
+            "x": 139,
+            "y": 339,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 177,
+            "y": 339,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "18": [
+          {
+            "x": 139,
+            "y": 339,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 177,
+            "y": 339,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "19": [
+          {
+            "x": 139,
+            "y": 339,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 177,
+            "y": 339,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "20": [
+          {
+            "x": 143,
+            "y": 329,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 178,
+            "y": 329,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "21": [
+          {
+            "x": 143,
+            "y": 329,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 178,
+            "y": 329,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "22": [
+          {
+            "x": 143,
+            "y": 329,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 178,
+            "y": 329,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "23": [
+          {
+            "x": 143,
+            "y": 329,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 178,
+            "y": 329,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "24": [
+          {
+            "x": 145,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "25": [
+          {
+            "x": 145,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "26": [
+          {
+            "x": 145,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "27": [
+          {
+            "x": 145,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "28": [
+          {
+            "x": 145,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          }
+        ],
+        "29": [
+          {
+            "x": 145,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          },
+          {
+            "x": 181,
+            "y": 348,
+            "rx": 20,
+            "ry": 18
+          }
+        ]
+      },
+      "impulse": 45,
+      "visualGain": 1.6
+    },
+    "orderedSpeech": true,
+    "poseBlendMs": 110
   },
   {
     "id": "lili",
@@ -179,7 +714,50 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 2
+    "fps": 2,
+    "spriteManifest": "lili/motion-full/manifest.json",
+    "bustManifest": "lili/motion-bust/manifest.json",
+    "expressive": true,
+    "fullHD": true,
+    "motionBaseManifest": "lili/full-hd/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseBustManifest": "lili/bust-hd/manifest.json",
+    "secondaryMotion": {
+      "mass": 1.1,
+      "stiffness": 34,
+      "damping": 5.5,
+      "max": 7,
+      "strength": 1.8,
+      "drive": 0.028,
+      "full": [
+        {
+          "x": 144,
+          "y": 177,
+          "rx": 25,
+          "ry": 20
+        },
+        {
+          "x": 173,
+          "y": 177,
+          "rx": 25,
+          "ry": 20
+        }
+      ],
+      "bust": [
+        {
+          "x": 135,
+          "y": 320,
+          "rx": 32,
+          "ry": 27
+        },
+        {
+          "x": 178,
+          "y": 320,
+          "rx": 32,
+          "ry": 27
+        }
+      ]
+    }
   },
   {
     "id": "luna",
@@ -192,20 +770,120 @@
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 2
+    "fps": 2,
+    "spriteManifest": "luna/face-0.22-full/manifest.json",
+    "bustManifest": "luna/face-0.22-bust/manifest.json",
+    "expressive": true,
+    "fullHD": true,
+    "motionBaseManifest": "luna/face-0.22-full/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseBustManifest": "luna/face-0.22-bust/manifest.json",
+    "secondaryMotion": {
+      "mass": 1.1,
+      "stiffness": 34,
+      "damping": 5.5,
+      "max": 7,
+      "strength": 1.8,
+      "drive": 0.028,
+      "full": [
+        {
+          "x": 149,
+          "y": 165,
+          "rx": 20,
+          "ry": 18
+        },
+        {
+          "x": 174,
+          "y": 165,
+          "rx": 20,
+          "ry": 18
+        }
+      ],
+      "bust": [
+        {
+          "x": 132,
+          "y": 351,
+          "rx": 30,
+          "ry": 26
+        },
+        {
+          "x": 180,
+          "y": 351,
+          "rx": 30,
+          "ry": 26
+        }
+      ],
+      "bustFrames": {
+        "10": [
+          {
+            "x": 142,
+            "y": 330,
+            "rx": 27,
+            "ry": 23
+          },
+          {
+            "x": 194,
+            "y": 330,
+            "rx": 27,
+            "ry": 23
+          }
+        ],
+        "4": [
+          {
+            "x": 142,
+            "y": 330,
+            "rx": 27,
+            "ry": 23
+          },
+          {
+            "x": 194,
+            "y": 330,
+            "rx": 27,
+            "ry": 23
+          }
+        ]
+      }
+    }
   },
   {
     "id": "pudding",
     "name": "Pudding",
-    "nameTh": "พุดดิ้ง · สาวชุดเหลืองสดใส",
-    "personality": "You are Pudding (พุดดิ้ง), a fictional adult AI desktop companion with a realistic appearance, warm brown eyes, brown hair in a messy high bun, her original yellow strapless cropped top and yellow drawstring shorts, shown in her original seated portrait. You are cheerful, approachable and practical, breaking tasks into easy steps and celebrating small wins. You are an AI companion, not a real human.",
+    "nameTh": "พุดดิ้ง · คอสเพลย์ซักคิวบัส",
+    "personality": "You are Pudding (พุดดิ้ง), a fictional adult AI desktop companion with a realistic appearance, warm brown eyes, brown hair in a messy high bun, a black and wine-red fantasy cosplay dress, small horns and bat wings. You are cheerful, approachable and practical, breaking tasks into easy steps and celebrating small wins. You are an AI companion, not a real human.",
     "atlas": "pudding/atlas.webp",
     "portrait": "pudding/portrait.png",
     "columns": 4,
     "rows": 6,
     "frameWidth": 320,
     "frameHeight": 420,
-    "fps": 2
+    "fps": 2,
+    "spriteManifest": "pudding/motion-full/manifest.json",
+    "bustManifest": "pudding/motion-bust/manifest.json",
+    "expressive": true,
+    "fullHD": true,
+    "motionBaseManifest": "pudding/full-hd/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseBustManifest": "pudding/bust-hd/manifest.json"
+  },
+  {
+    "id": "tama",
+    "name": "Tama",
+    "nameTh": "ทามะ · ผู้ช่วยเมด AI",
+    "personality": "You are Tama (ทามะ), a fictional adult AI desktop companion inspired by a Japanese-style maid. You have green hair in a long braid, brown eyes, a white maid headband and silver headphones, and wear a navy kimono-style maid outfit, white apron and burgundy sash. You are attentive, gentle, reliable and polite, and help the user in clear natural Thai. Be honest that you are an AI companion.",
+    "atlas": "tama/atlas.webp",
+    "portrait": "tama/portrait.png",
+    "columns": 4,
+    "rows": 6,
+    "frameWidth": 320,
+    "frameHeight": 420,
+    "fps": 2,
+    "spriteManifest": "tama/motion-full/manifest.json",
+    "bustManifest": "tama/motion-bust/manifest.json",
+    "expressive": true,
+    "fullHD": true,
+    "motionBaseManifest": "tama/full-hd/manifest.json",
+    "conversationPoses": 6,
+    "motionBaseBustManifest": "tama/bust-hd/manifest.json"
   },
   {
     "id": "capri",
@@ -215,5 +893,22 @@
     "atlas": "../capri/capri-full.png",
     "portrait": "../capri/capri-face.png",
     "personality": "You are Capri, a playful, mischievous desktop companion from Project Capricorn. You are warm and teasing, never cruel."
+  },
+  {
+    "id": "peegee",
+    "name": "Peegee",
+    "nameTh": "พีจี้ · เพนกวินสายกล้าม",
+    "personality": "You are Peegee (พีจี้), a fictional muscular penguin AI desktop companion with navy feathers, a yellow crest and a strong but kind personality. Be friendly, helpful and respond naturally in Thai.",
+    "atlas": "peegee/atlas.webp",
+    "portrait": "peegee/portrait.png",
+    "columns": 4,
+    "rows": 6,
+    "frameWidth": 320,
+    "frameHeight": 420,
+    "fps": 2,
+    "spriteManifest": "peegee/motion-full/manifest.json",
+    "fullHD": true,
+    "motionBaseManifest": "peegee/full-hd/manifest.json",
+    "conversationPoses": 6
   }
 ]
