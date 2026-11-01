@@ -80,9 +80,13 @@ function createTelegram({ getToken, getChat, setChat, onMessage, log = () => {},
   }
 
   // text, with buttons: [[{ text, data } | { text, url }]]
+  const markup = (buttons) => (buttons?.length ? { inline_keyboard: buttons.map((row) => row.map((b) => (b.url ? { text: b.text, url: b.url } : { text: b.text, callback_data: b.data }))) } : undefined);
   function send(chatId, text, buttons) {
-    const reply_markup = buttons?.length ? { inline_keyboard: buttons.map((row) => row.map((b) => (b.url ? { text: b.text, url: b.url } : { text: b.text, callback_data: b.data }))) } : undefined;
-    return call('sendMessage', { chat_id: chatId, text: String(text).slice(0, 4000), reply_markup, disable_web_page_preview: true });
+    return call('sendMessage', { chat_id: chatId, text: String(text).slice(0, 4000), reply_markup: markup(buttons), disable_web_page_preview: true });
+  }
+  // a message already sent, rewritten (her live progress, a question answered)
+  function edit(chatId, messageId, text, buttons) {
+    return call('editMessageText', { chat_id: chatId, message_id: messageId, text: String(text).slice(0, 4000), reply_markup: markup(buttons) || { inline_keyboard: [] }, disable_web_page_preview: true });
   }
   // a file: kind 'photo' | 'audio' | 'video' | 'document'
   function sendFile(chatId, kind, bytes, name, mime, caption = '') {
@@ -98,6 +102,7 @@ function createTelegram({ getToken, getChat, setChat, onMessage, log = () => {},
     start() { if (running || !getToken()) return; running = true; loop(); },
     stop() { running = false; controller?.abort(); },
     get running() { return running; },
+    edit,
     me: () => call('getMe'),
     startPairing, send, sendFile, typing, download, handle,
   };

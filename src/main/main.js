@@ -27,6 +27,8 @@ const { createJobs } = require('./jobs');
 const { createTelegram } = require('./telegram');
 const { createPhone } = require('./phone');
 const { createVibe } = require('./vibe');
+const { createAgents } = require('./agents');
+const { createAgentPhone } = require('./agent-phone');
 const { createNews } = require('./news');
 const { createBriefs } = require('./briefs');
 let news = null, briefs = null; // the news on your topics, and her briefs
@@ -57,6 +59,7 @@ async function callTool(server, name, args, options) {
 const crypto = require('node:crypto');
 const VIBE_TOKEN = crypto.randomBytes(24).toString('hex'); // only her own Vibecode jobs may ask for approvals
 let vibe = null; // Vibecode: projects and their coding agents, run from your phone
+let agents = null, agentPhone = null; // her live coding-agent sessions (agents.js), and your phone's view of them
 const pinHash = (pin) => crypto.createHash('sha256').update(`uncle:${pin}`).digest('hex');
 let telegram = null, phone = null; // your phone, through her Telegram bot
 let remote = null, remoteJob = null; // the computer from your phone (screen, a job, power), and the job it started
@@ -1024,8 +1027,16 @@ function startPhone() {
     port: PORT, token: VIBE_TOKEN, log: (line) => console.log(line),
   });
   const coding = { ...vibe, shot: shotPage };
+  agents ||= createAgents({ modelFor: (agent) => config.load().vibe?.models?.[agent] || null, onEvent: (e) => { agentPhone?.onEvent(e); overlay?.webContents.send('agents:event', e); }, log: (line) => console.log(line) });
+  agentPhone = createAgentPhone({
+    telegram, agents, settings: phoneSettings,
+    projectDir: (name) => { const dir = vibe.dirOf(name); if (!fs.existsSync(dir)) throw new Error(`ไม่มีโปรเจกต์ ${name} · /projects ดูรายชื่อ หรือ /create ${name}`); return dir; },
+    getResume: (project, agent) => config.load().vibe?.resume?.[project]?.[agent] || null,
+    saveResume: (project, agent, id) => { const v = config.load().vibe || {}; if (v.resume?.[project]?.[agent] !== id) updateConfig({ vibe: { ...v, resume: { ...v.resume, [project]: { ...v.resume?.[project], [agent]: id } } } }); },
+    log: (line) => console.log(line),
+  });
   phone = createPhone({
-    telegram, settings: () => ({ ...phoneSettings(), project: config.load().vibe?.project || null }), answer: phoneAnswer, coding, remote,
+    telegram, settings: () => ({ ...phoneSettings(), project: config.load().vibe?.project || null }), answer: phoneAnswer, coding, remote, hub: agentPhone,
     setProject: (project) => updateConfig({ vibe: { ...config.load().vibe, project } }),
     setGhost: (on) => updateConfig({ ghost: on }),
     onReply: (question, text) => { if (phoneSettings().pcVoice) sendCommand('assistant-alert', { kind: 'phone', question, text }); },
@@ -1948,6 +1959,7 @@ function main() {
   });
 
   app.on('will-quit', () => {
+    agents?.closeAll();
     mcp?.stop();
     computer?.stop(); computerNative?.stop();
     speech.stop();

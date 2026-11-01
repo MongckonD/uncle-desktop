@@ -136,7 +136,7 @@ function codex({ cwd, resume, model, run, emit }) {
 
 const DRIVERS = { claude, codex };
 
-function createAgents({ onEvent = () => {}, run = spawn, log = () => {} } = {}) {
+function createAgents({ onEvent = () => {}, run = spawn, modelFor = () => null, log = () => {} } = {}) {
   const sessions = new Map();
 
   function start({ agent = 'claude', cwd, resume = null, model = null, title = '' }) {
@@ -151,7 +151,7 @@ function createAgents({ onEvent = () => {}, run = spawn, log = () => {} } = {}) 
       if (evt.type === 'text' || evt.type === 'tool') s.status = s.asks.size ? 'asking' : 'working';
       onEvent({ id, ...evt });
     };
-    s.driver = driver({ cwd, resume, model, run, emit });
+    s.driver = driver({ cwd, resume, model: model || modelFor(agent), run, emit });
     s.driver.child.on('error', (err) => { log(`[agents] ${agent}: ${err.message}`); emit({ type: 'turn', status: 'error', text: `เรียก ${agent} ไม่ได้: ${err.message}` }); });
     s.driver.child.on('exit', (code) => { sessions.delete(id); onEvent({ id, type: 'closed', code }); });
     s.driver.child.stderr?.on('data', (d) => log(`[agents] ${agent}: ${short(d, 300)}`));
