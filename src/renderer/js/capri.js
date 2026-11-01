@@ -60,6 +60,9 @@ export class Capri {
     this.stowed = false;  // folded away in her biochip (Ctrl+Alt+C)
     this.dormant = false; // asleep, down to her mask
     this.wander = true;
+    this.locked = false;   // her place locked (her menu): she doesn't go anywhere by herself
+    this.lockDrag = false; // ...but you can still pick her up and put her elsewhere
+    this.ghost = false;    // out of sight, still working (her menu): nothing drawn, nothing of her own
     this.possessWindows = true; // tray: "Possess my windows"
     this.restOn = 'corner'; // where she rests when nothing's going on: her corner, or 'taskbar' (her menu)
     this.nextHome = 0;
@@ -420,7 +423,7 @@ export class Capri {
 
   loop(now) {
     requestAnimationFrame(this.loop);
-    if (this.hidden) return;
+    if (this.hidden || this.ghost) return;
     if (now - this.lastDraw < this.interval() - 1) return;
     this.drawFrame(now);
     this.behave(now);
@@ -555,7 +558,7 @@ export class Capri {
 
   // What she does with herself when nobody needs her.
   wanderStep() {
-    if (!this.wander || this.stance === 'peek') {
+    if (!this.wander || this.locked || this.stance === 'peek') {
       if (this.stance !== 'peek') this.flourish();
       return;
     }
@@ -1194,7 +1197,7 @@ export class Capri {
 
   // Leave in a column of light, reappear somewhere else.
   async teleport(to, opts = {}) {
-    if (this.stowed) return; // put away: she stays in her biochip
+    if (this.stowed || (this.locked && !opts.force)) return; // put away: she stays in her biochip; locked: where she is (but you can still move her)
     if (this.busy || this.dormant) {
       this.pending = { to, opts };
       if (this.dormant) this.rouse(); // asleep, down to her mask: she comes back first, then goes
@@ -1351,7 +1354,7 @@ export class Capri {
   }
 
   canPossess() {
-    return this.possessWindows && !this.busy && !this.hidden && this.stance === 'sit' && !reducedMotion.matches
+    return this.possessWindows && !this.locked && !this.busy && !this.hidden && this.stance === 'sit' && !reducedMotion.matches
       && this.windows.wins.some((w) => w.id === this.perch?.id);
   }
 
@@ -1413,7 +1416,7 @@ export class Capri {
 
   // Lean in from an edge of the screen: vanish, then slide in on twos, three drawings.
   async peek(side = pick(['left', 'right', 'top'])) {
-    if (this.busy) return;
+    if (this.busy || this.locked) return;
     const s = this.scale;
     const { w, h } = this.view;
     let at, from, facing, dir;
@@ -1749,7 +1752,7 @@ export class Capri {
       }
       down = { x: e.clientX, y: e.clientY, pos: { ...this.pos }, at: this.spritePoint(e.clientX, e.clientY) };
       this.track = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
-      if (thrown) this.pickUp(down);
+      if (thrown && (!this.locked || this.lockDrag)) this.pickUp(down);
     });
     window.addEventListener('mousemove', (e) => {
       this.mouse = { x: e.clientX, y: e.clientY }; // a window she's in watches it
@@ -1758,7 +1761,7 @@ export class Capri {
         this.track.push({ x: e.clientX, y: e.clientY, t: now });
         while (this.track.length > 2 && now - this.track[0].t > 160) this.track.shift();
         const dx = e.clientX - down.x, dy = e.clientY - down.y;
-        if (!this.dragging && Math.hypot(dx, dy) > 5 && !this.busy) this.pickUp(down);
+        if (!this.dragging && Math.hypot(dx, dy) > 5 && !this.busy && (!this.locked || this.lockDrag)) this.pickUp(down);
         if (this.dragging) {
           this.pos = {
             x: clamp(down.pos.x + dx, 40, this.view.w - 40),
@@ -2260,7 +2263,7 @@ export class Capri {
   // turns to it, crouches, and jumps, leading with her arm. She goes through the edge like a throw
   // would (canCross / onCross), and lands on her feet over there.
   async leapTo(side) {
-    if (this.busy || this.stowed || this.dormant || this.hidden || this.dragging || reducedMotion.matches) return false;
+    if (this.busy || this.stowed || this.locked || this.dormant || this.hidden || this.dragging || reducedMotion.matches) return false;
     if (this.stance !== 'stand' && this.stance !== 'sit') return false;
     this.busy = true;
     this.wake();

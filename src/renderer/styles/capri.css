@@ -903,3 +903,7 @@ html[data-motion='reduced'] .panel__line.is-glitching,
 html[data-motion='reduced'] .panel[data-kind='alert'] .panel__state {
   animation: none !important;
 }
+
+/* Out of sight, still working (her menu): nothing of her; the mic and player badges only if you like */
+body.ghost #capri, body.ghost #fx, body.ghost #panel, body.ghost #chip, body.ghost #mask, body.ghost #ticker { visibility: hidden; }
+body.ghost:not(.ghost-badges) #listening-stop, body.ghost:not(.ghost-badges) #speech-stop, body.ghost:not(.ghost-badges) #mini-player { visibility: hidden; }

@@ -25,7 +25,7 @@ export function firstOpenStep(done) {
   return i < 0 ? STEPS.length - 1 : i;
 }
 
-const HOTKEYS = [['stopJob', 'หยุดงานควบคุมเครื่อง'], ['toggle', 'ซ่อน / เรียกตัวละคร'], ['voice', 'เริ่ม / หยุดพูด'], ['mute', 'ปิดไมค์ทันที']];
+const HOTKEYS = [['stopJob', 'หยุดงานควบคุมเครื่อง'], ['toggle', 'ซ่อน / เรียกตัวละคร'], ['ghost', 'ซ่อนแบบทำงานเบื้องหลัง'], ['voice', 'เริ่ม / หยุดพูด'], ['mute', 'ปิดไมค์ทันที']];
 const PROVIDERS = { ollama: 'Ollama ในเครื่อง', openai: 'OpenAI', gemini: 'Gemini', groq: 'Groq', openrouter: 'OpenRouter', mistral: 'Mistral', deepseek: 'DeepSeek', pollinations: 'ใช้ฟรีออนไลน์', claude: 'Claude Code', custom: 'เซิร์ฟเวอร์ที่ตั้งเอง' };
 const SAMPLE = 'สวัสดีค่ะ ฉันพร้อมช่วยคุณแล้ว';
 

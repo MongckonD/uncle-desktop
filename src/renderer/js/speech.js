@@ -2,6 +2,25 @@ export function speechText(text) {
   return String(text || '').replace(/```[\s\S]*?```/g, ' ').replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/https?:\/\/\S+/g, '').replace(/[*#`_>|]/g, '').replace(/\s+/g, ' ').trim().slice(0, 2000);
 }
 
+// Her answer as it arrives, said piece by piece: the next piece of `text` worth saying after the
+// first `spoken` characters: up to a sentence end (. ! ? or a new line; a full stop only counts with a
+// space after it, so 3.5 stays whole), or at a space once it runs long. An unfinished code block waits.
+// `final`: all that's left. Returns { chunk, end } or null.
+const SENTENCE = /[.!?…]+["'”’)\]]*\s+|[。！？]+|\n+/g;
+export function nextSpeakable(text, spoken, final = false) {
+  const open = (n) => (text.slice(0, n).match(/```/g) || []).length % 2 === 1; // inside a code block at n
+  const limit = !final && open(text.length) ? text.lastIndexOf('```') : text.length;
+  const rest = text.slice(spoken, limit);
+  SENTENCE.lastIndex = 0;
+  for (let m; (m = SENTENCE.exec(rest));) {
+    const end = m.index + m[0].length;
+    if (!open(spoken + m.index) && rest.slice(0, end).trim().length >= 12) return { chunk: rest.slice(0, end), end: spoken + end };
+  }
+  if (final) return rest.trim() ? { chunk: rest, end: limit } : null;
+  const space = rest.length > 140 ? rest.lastIndexOf(' ', 140) : -1;
+  return space > 12 && !open(spoken + space) ? { chunk: rest.slice(0, space), end: spoken + space } : null;
+}
+
 // How loud her voice is, MOUTH_RATE times a second, 0 to 1: RMS per step, cut at the 35/70/97% quantiles of the
 // voiced steps so a quiet voice moves as much as a loud one (after lachydotmcg's Voice.Mouths).
 const MOUTH_RATE = 12;
@@ -160,12 +179,21 @@ export class Speech {
     this.stopButton.textContent = '■ หยุดเสียงพูด';
     this.stopButton.hidden = false; this.status.textContent = 'กำลังสร้างเสียง…';
     try {
-      this.context ||= new AudioContext(); await this.context.resume();
-      const result = await this.host.speechSpeak(text);
+      const buffer = await this.fetchAudio(text);
       if (serial !== this.serial) return;
-      const bytes = Uint8Array.from(atob(result.audio), (c) => c.charCodeAt(0));
-      const buffer = await this.context.decodeAudioData(bytes.buffer);
-      if (serial !== this.serial) return;
+      this.playBuffer(buffer, serial);
+    } catch (error) { if (serial === this.serial) { this.stopButton.hidden = true; throw error; } }
+  }
+  // the voice service's audio for `text`, decoded
+  async fetchAudio(text) {
+    this.context ||= new AudioContext(); await this.context.resume();
+    const result = await this.host.speechSpeak(text);
+    return this.context.decodeAudioData(Uint8Array.from(atob(result.audio), (c) => c.charCodeAt(0)).buffer);
+  }
+  // plays one piece through her effects; resolves when it ends (or is stopped). `last`: nothing follows it
+  playBuffer(buffer, serial, { last = true } = {}) {
+    return new Promise((done) => {
+      this.finishPlay = done;
       const ctx = this.context, fx = this.settings, cents = (fx.pitch || 0) * 100;
       this.gain = ctx.createGain(); this.gain.gain.value = fx.volume; this.gain.connect(ctx.destination);
       // robot: her voice rung against a low hum, mixed in by how much
@@ -184,15 +212,60 @@ export class Speech {
       this.source = this.sources[0]; this.speed = 2 ** (cents / 1200);
       // glitch: now and then her voice drops out for a few hundredths of a second
       if (fx.glitch > 0) this.glitchTimer = setInterval(() => { if (Math.random() < fx.glitch * 0.35) { const t = ctx.currentTime; this.gain.gain.setValueAtTime(0, t); this.gain.gain.setValueAtTime(fx.volume, t + 0.03 + Math.random() * 0.06); } }, 120);
-      this.source.onended = () => { if (serial === this.serial) { this.stopButton.hidden = true; this.status.textContent = 'อ่านจบแล้ว'; this.release(); } };
+      this.source.onended = () => {
+        if (serial === this.serial) { if (last) { this.stopButton.hidden = true; this.status.textContent = 'อ่านจบแล้ว'; } this.release(); }
+        done();
+      };
       this.mouths = mouthLevels(buffer.getChannelData(0), buffer.sampleRate);
       for (const source of this.sources) source.start(); this.startedAt = ctx.currentTime; this.status.textContent = 'กำลังอ่าน…';
-    } catch (error) { if (serial === this.serial) { this.stopButton.hidden = true; throw error; } }
+    });
   }
   // her voice's loudness right now, 0 to 1, for her mouth
   level() { return this.source && this.mouths ? this.mouths[Math.floor((this.context.currentTime - this.startedAt) * (this.speed || 1) * MOUTH_RATE)] ?? 0 : 0; }
   // the voice's nodes and timers, let go
-  release() { clearInterval(this.glitchTimer); this.osc?.stop(); this.osc = null; for (const s of this.sources || []) { s.onended = null; try { s.stop(); } catch {} } this.sources = []; this.source = null; }
-  stop() { const active = this.source || !this.stopButton.hidden; this.serial++; this.lastError = false; this.host.speechStop(); if (this.source) this.release(); this.stopButton.hidden = true; if (active) this.status.textContent = 'หยุดเสียงแล้ว'; }
-  reply(text) { if (this.settings.auto) this.play(text).catch((error) => { this.error(error); if (!this.open) { this.lastError = true; this.stopButton.textContent = 'เสียงพูดไม่พร้อม — เปิดตั้งค่า'; this.stopButton.hidden = false; } }); }
+  release() { this.finishPlay?.(); this.finishPlay = null; clearInterval(this.glitchTimer); this.osc?.stop(); this.osc = null; for (const s of this.sources || []) { s.onended = null; try { s.stop(); } catch {} } this.sources = []; this.source = null; }
+  stop() { const active = this.source || !this.stopButton.hidden; if (this.stream) { this.stream.cancelled = true; this.stream.wake?.(); } this.serial++; this.lastError = false; this.host.speechStop(); if (this.source) this.release(); this.stopButton.hidden = true; if (active) this.status.textContent = 'หยุดเสียงแล้ว'; }
+  // the voice failed on her reply: said in the dialog, or on the stop button when it's closed
+  failed(error) { this.error(error); if (!this.open) { this.lastError = true; this.stopButton.textContent = 'เสียงพูดไม่พร้อม — เปิดตั้งค่า'; this.stopButton.hidden = false; } }
+  // her answer as it comes in (chat.js), turn `id`: said sentence by sentence, the next made while the last plays
+  feed(id, text) {
+    if (!this.settings.auto || this.muted) return;
+    if (this.stream?.id !== id) { this.stop(); this.stream = { id, serial: this.serial, spoken: 0, chunks: [], tail: Promise.resolve() }; this.drain(this.stream); }
+    this.pump(this.stream, text, false);
+  }
+  pump(s, text, final) {
+    if (s.cancelled) return;
+    for (let next; (next = nextSpeakable(text, s.spoken, final));) {
+      s.spoken = next.end;
+      const piece = speechText(next.chunk);
+      if (!piece) continue;
+      this.stopButton.textContent = '■ หยุดเสียงพูด'; this.stopButton.hidden = false;
+      // one at a time to the voice service (a new request stops the one before), each started when the last has come back
+      s.tail = s.tail.then(() => (s.cancelled ? null : this.fetchAudio(piece))).catch((error) => ({ error }));
+      s.chunks.push(s.tail);
+    }
+    if (final) s.ended = true;
+    s.wake?.();
+  }
+  async drain(s) {
+    try {
+      for (let i = 0; ; i++) {
+        while (i >= s.chunks.length) {
+          if (s.ended) { if (!s.cancelled && s.serial === this.serial) { this.stopButton.hidden = true; this.status.textContent = 'อ่านจบแล้ว'; } return; }
+          await new Promise((resolve) => { s.wake = resolve; });
+          if (s.cancelled) return;
+        }
+        const got = await s.chunks[i];
+        if (s.cancelled || s.serial !== this.serial || !got) return;
+        if (got.error) throw got.error;
+        await this.playBuffer(got, s.serial, { last: false });
+      }
+    } catch (error) { if (!s.cancelled) { s.cancelled = true; this.stopButton.hidden = true; this.failed(error); } }
+  }
+  // her whole answer: the rest of it said (or, with no stream, all of it)
+  reply(text) {
+    const s = this.stream;
+    if (s && !s.ended) { if (s.cancelled) s.ended = true; else this.pump(s, text, true); return; } // stopped mid-answer: the rest isn't read
+    if (this.settings.auto) this.play(text).catch((error) => this.failed(error));
+  }
 }

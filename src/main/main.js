@@ -27,6 +27,8 @@ const { createJobs } = require('./jobs');
 const { createTelegram } = require('./telegram');
 const { createPhone } = require('./phone');
 const { createVibe } = require('./vibe');
+const { createAgents } = require('./agents');
+const { createAgentPhone } = require('./agent-phone');
 const { createNews } = require('./news');
 const { createBriefs } = require('./briefs');
 let news = null, briefs = null; // the news on your topics, and her briefs
@@ -55,14 +57,27 @@ async function callTool(server, name, args, options) {
   throw new Error(`no tool ${name}`);
 }
 const crypto = require('node:crypto');
-const VIBE_TOKEN = crypto.randomBytes(24).toString('hex'); // only her own Vibecode jobs may ask for approvals
 let vibe = null; // Vibecode: projects and their coding agents, run from your phone
+let agents = null, agentPhone = null, agentsWin = null; // her live coding-agent sessions (agents.js), your phone's view of them, and the computer's
+const agentProject = (name) => { const dir = vibe.dirOf(name); if (!fs.existsSync(dir)) throw new Error(`ไม่มีโปรเจกต์ ${name} · /projects ดูรายชื่อ หรือ /create ${name}`); return dir; };
+const agentResume = (project, agent) => config.load().vibe?.resume?.[project]?.[agent] || null;
+// the sessions window: a normal one (clicks and typing), the same sessions as your phone's
+function openAgentsWindow() {
+  if (agentsWin && !agentsWin.isDestroyed()) { agentsWin.show(); agentsWin.focus(); return; }
+  agentsWin = new BrowserWindow({
+    width: 980, height: 680, minWidth: 640, minHeight: 420, title: 'Coding Agent สด', backgroundColor: '#15131c', autoHideMenuBar: true,
+    icon: path.join(ROOT, 'assets', 'icons', process.platform === 'win32' ? 'uncle.ico' : 'uncle.png'),
+    webPreferences: { preload: path.join(__dirname, '..', 'agents-preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  agentsWin.loadFile(path.join(__dirname, '..', 'renderer', 'agents.html'));
+  agentsWin.on('closed', () => { agentsWin = null; });
+}
 const pinHash = (pin) => crypto.createHash('sha256').update(`uncle:${pin}`).digest('hex');
 let telegram = null, phone = null; // your phone, through her Telegram bot
 let remote = null, remoteJob = null; // the computer from your phone (screen, a job, power), and the job it started
 // her Telegram settings, with what's off by default
 const PHONE_SWITCHES = { chat: true, approve: true, screen: false, control: false, power: false };
-const phoneSettings = () => { const t = config.load().telegram || {}; return { chatId: t.chatId || null, notify: t.notify || 'always', voiceReply: t.voiceReply || 'voice', switches: { ...PHONE_SWITCHES, ...t.switches }, pin: t.pin || '' }; };
+const phoneSettings = () => { const t = config.load().telegram || {}; return { chatId: t.chatId || null, notify: t.notify || 'always', voiceReply: t.voiceReply || 'voice', pcVoice: t.pcVoice === true, pcAsk: t.pcAsk !== false, pcSteps: t.pcSteps !== false, pcShot: t.pcShot !== false, switches: { ...PHONE_SWITCHES, ...t.switches }, pin: t.pin || '' }; };
 const savePhone = (patch) => updateConfig({ telegram: { ...config.load().telegram, ...patch } });
 // a job for her page (renderer), answered later: decoding audio and video with Chromium
 const rendererCalls = new Map();
@@ -242,6 +257,7 @@ const HOTKEY_ACTIONS = {
   toggle: () => toggleVisible(),
   voice: () => sendCommand('listening-toggle'),
   mute: () => { listening?.stop(); sendCommand('listening-stop'); },
+  ghost: () => updateConfig({ ghost: !config.load().ghost }),
 };
 const hotkeys = () => ({ ...config.DEFAULTS.hotkeys, ...config.load().hotkeys });
 // Registered again from scratch; returns the actions whose keys another app holds (or that aren't keys).
@@ -516,6 +532,9 @@ function badgeLook(key, label) {
 function updateConfig(patch) {
   if ('badges' in patch && !Object.values(patch.badges || {}).every((v) => ['full', 'icon'].includes(v))) throw new Error('Invalid badge look');
   if ('badgePos' in patch && !Object.values(patch.badgePos || {}).every((p) => Number.isFinite(p?.right) && Number.isFinite(p?.bottom))) throw new Error('Invalid badge position');
+  if ('lockAt' in patch && patch.lockAt !== null && !Object.values(patch.lockAt || {}).every((p) => Number.isFinite(p?.x) && Number.isFinite(p?.y))) throw new Error('Invalid lock place');
+  if ('ghostShow' in patch && !['voice', 'peek'].includes(patch.ghostShow)) throw new Error('Invalid hidden-mode answer');
+  if (['lockPos', 'lockDrag', 'ghost', 'ghostBadges'].some((k) => k in patch && typeof patch[k] !== 'boolean')) throw new Error('Invalid switch');
   if ('scale' in patch && (!Number.isFinite(patch.scale) || patch.scale < 0.45 || patch.scale > 1.6)) throw new Error('Invalid character scale');
   if ('characterFraming' in patch && !['full', 'bust'].includes(patch.characterFraming)) throw new Error('Invalid character framing');
   if ('voiceAgent' in patch) {patch.voiceAgent=voiceAgent.settings(patch.voiceAgent);voiceAgentAPI?.stop();voiceAgentSession=null;computer?.stop();sendCommand('voice-agent-stop');}
@@ -681,6 +700,15 @@ function rebuildTray() {
       ],
     },
     wander: { label: t.wander, type: 'checkbox', checked: cfg.wander, click: (item) => updateConfig({ wander: item.checked }) },
+    lock: { label: th ? 'ล็อกตำแหน่ง (ไม่เดินไปไหนเอง)' : 'Lock her place (she stays put)', type: 'checkbox', checked: cfg.lockPos, click: (item) => updateConfig({ lockPos: item.checked, lockAt: item.checked ? null : cfg.lockAt }) },
+    lockDrag: { label: th ? '   ↳ ลากย้ายได้แม้ล็อก' : '   ↳ Can still be dragged', type: 'checkbox', checked: cfg.lockDrag, enabled: cfg.lockPos, click: (item) => updateConfig({ lockDrag: item.checked }) },
+    ghost: { label: th ? 'ซ่อน (ทำงานเบื้องหลัง)' : 'Hide, keep working', type: 'checkbox', checked: cfg.ghost, accelerator: hotkeys().ghost || undefined, click: (item) => updateConfig({ ghost: item.checked }) },
+    ghostOptions: { label: th ? 'ตอนซ่อนแบบทำงานเบื้องหลัง' : 'While hidden, working', submenu: [
+      { label: th ? 'ตอบด้วยเสียงอย่างเดียว' : 'Answer by voice only', type: 'radio', checked: cfg.ghostShow !== 'peek', click: () => updateConfig({ ghostShow: 'voice' }) },
+      { label: th ? 'โผล่ออกมาตอบ แล้วกลับไปซ่อน' : 'Come out to answer, then hide again', type: 'radio', checked: cfg.ghostShow === 'peek', click: () => updateConfig({ ghostShow: 'peek' }) },
+      { type: 'separator' },
+      { label: th ? 'แสดงสถานะไมค์และเพลง' : 'Show the mic and player badges', type: 'checkbox', checked: cfg.ghostBadges !== false, click: (item) => updateConfig({ ghostBadges: item.checked }) },
+    ] },
     possess: { label: t.possess, type: 'checkbox', checked: cfg.possess, click: (item) => updateConfig({ possess: item.checked }) },
     jealous: { label: t.jealous, type: 'checkbox', checked: cfg.jealous !== false, click: (item) => updateConfig({ jealous: item.checked }) },
     pcReact: { label: t.pcReact, type: 'checkbox', checked: cfg.pcReact !== false, click: (item) => updateConfig({ pcReact: item.checked }) },
@@ -748,7 +776,7 @@ function rebuildTray() {
   };
   // every setting, as the tabs of her settings dialog (settings.js renders them, menu:click runs them)
   settingsGroups = [
-    { id: 'appearance', title: th ? 'ตัวละคร' : 'Character', items: [item.character, item.quick, item.size, item.view, item.visible, item.custom] },
+    { id: 'appearance', title: th ? 'ตัวละคร' : 'Character', items: [item.character, item.quick, item.size, item.view, item.visible, item.ghost, item.ghostOptions, item.custom] },
     { id: 'chat', title: th ? 'AI แชต' : 'Chat AI', items: item.chat.submenu },
     { id: 'voice', title: th ? 'เสียงและไมค์' : 'Voice', items: [
       { label: th ? 'เสียงพูดภาษาไทย…' : 'Speech settings…', click: () => sendCommand('speech') },
@@ -758,7 +786,7 @@ function rebuildTray() {
       { label: th ? 'คืนตำแหน่งสถานะไมค์และเพลง' : 'Reset mic and player positions', click: () => updateConfig({ badgePos: {} }) },
       ...item.sound.submenu,
     ] },
-    { id: 'behavior', title: th ? 'พฤติกรรม' : 'Behavior', items: [item.wander, { label: th ? 'มินิเพลเยอร์ และเต้นตามเพลง' : 'Mini player, and dancing to music', type: 'checkbox', checked: cfg.miniPlayer !== false, click: (it) => updateConfig({ miniPlayer: it.checked }) }, item.possess, item.jealous, item.pcReact, item.lookAuto, item.rest, item.motion, item.screen] },
+    { id: 'behavior', title: th ? 'พฤติกรรม' : 'Behavior', items: [item.wander, item.lock, item.lockDrag, { label: th ? 'มินิเพลเยอร์ และเต้นตามเพลง' : 'Mini player, and dancing to music', type: 'checkbox', checked: cfg.miniPlayer !== false, click: (it) => updateConfig({ miniPlayer: it.checked }) }, item.possess, item.jealous, item.pcReact, item.lookAuto, item.rest, item.motion, item.screen] },
     // her assistant: Gmail and Google Calendar (MCP), and her alerts
     { id: 'assistant', title: th ? 'ผู้ช่วย' : 'Assistant', items: [
       ...['gmail', 'calendar'].map((kind) => {
@@ -836,11 +864,17 @@ function rebuildTray() {
         { type: 'separator' },
         { label: th ? 'ตอบกลับเป็นเสียง' : 'Reply in her voice', enabled: false },
         radio('voiceReply', 'voice', th ? 'เมื่อคุณส่งเสียงมา' : 'When you send a voice message'), radio('voiceReply', 'always', th ? 'ทุกครั้ง' : 'Always'), radio('voiceReply', 'never', th ? 'ไม่ตอบเป็นเสียง' : 'Never'),
+        { label: th ? 'พูดคำตอบออกลำโพงคอมด้วย' : 'Also say the answer on the computer', type: 'checkbox', checked: s.pcVoice, click: (item) => savePhone({ pcVoice: item.checked }) },
         { type: 'separator' },
         sw('chat', th ? 'คุยและถามข้อมูลจากมือถือ' : 'Chat from your phone'),
         sw('approve', th ? 'อนุมัติงานจากมือถือ (ส่งเมล สร้างนัด…)' : 'Approve from your phone (send mail, events…)'),
         sw('screen', th ? 'ส่งภาพหน้าจอคอมเมื่อขอ (/screen PIN)' : 'Send a screenshot when asked (/screen PIN)'),
         sw('control', th ? 'สั่งงานคอมจากมือถือ (/pc PIN งาน)' : 'Computer jobs from your phone (/pc PIN task)'),
+        ...(s.switches.control ? [
+          { label: th ? '   ↳ ถามอนุมัติและคำถามของ AI ในมือถือ' : '   ↳ Approvals and questions on your phone', type: 'checkbox', checked: s.pcAsk, click: (item) => savePhone({ pcAsk: item.checked }) },
+          { label: th ? '   ↳ ส่งความคืบหน้าทีละขั้น' : '   ↳ Send each step', type: 'checkbox', checked: s.pcSteps, click: (item) => savePhone({ pcSteps: item.checked }) },
+          { label: th ? '   ↳ ส่งภาพหน้าจอเมื่องานจบ (ต้องเปิดส่งภาพหน้าจอ)' : '   ↳ Screenshot when done (needs screenshots on)', type: 'checkbox', checked: s.pcShot, click: (item) => savePhone({ pcShot: item.checked }) },
+        ] : []),
         sw('power', th ? 'ล็อก พัก ปิดเครื่องจากมือถือ (/lock PIN)' : 'Lock, sleep, shut down from your phone (/lock PIN)'),
         { type: 'separator' },
         { label: s.pin ? (th ? 'เปลี่ยน PIN…' : 'Change PIN…') : (th ? 'ตั้ง PIN (สำหรับคำสั่งเสี่ยงจากมือถือ)…' : 'Set a PIN (for risky commands)…'), click: () => sendCommand('telegram-pin') },
@@ -877,6 +911,7 @@ function rebuildTray() {
     { label: t.sync(Math.min(100, Math.floor(xp / 10)), t.stages[stage]), enabled: false },
     { type: 'separator' },
     { label: t.talk, click: () => sendCommand('chat') },
+    { label: th ? 'Coding Agent สด (Claude Code / Codex)…' : 'Live coding agents (Claude Code / Codex)…', click: () => openAgentsWindow() },
     { label: th ? 'เริ่มพูด / ปิดไมค์' : 'Talk / stop mic', accelerator: hotkeys().voice || undefined, click: () => sendCommand('listening-toggle') },
     // the mic in one of its three ways, started at once
     { label: th ? 'โหมดไมค์' : 'Mic mode', submenu: [
@@ -893,6 +928,7 @@ function rebuildTray() {
     quickModel,
     { label: t.mute, type: 'checkbox', checked: cfg.muted, click: (it) => updateConfig({ muted: it.checked }) },
     item.visible,
+    item.ghost,
     ...(computer?.busy ? [{ label: th ? 'หยุดงานควบคุมเครื่อง' : 'Stop computer job', accelerator: hotkeys().stopJob || undefined, click: () => computer?.stop() }] : []),
     ...(reminders.length ? [{
         label: t.reminders,
@@ -1003,13 +1039,25 @@ function startPhone() {
     getSettings: () => ({ workspace: config.load().vibe?.workspace || workspace }),
     getState: (name) => config.load().vibe?.projects?.[name],
     saveState: (name, state) => { const v = config.load().vibe || {}; updateConfig({ vibe: { ...v, projects: { ...v.projects, [name]: state } } }); },
-    approveScript: path.join(ROOT, 'hooks', 'uncle-approve-mcp.js').replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`),
-    port: PORT, token: VIBE_TOKEN, log: (line) => console.log(line),
   });
   const coding = { ...vibe, shot: shotPage };
-  phone = createPhone({
-    telegram, settings: () => ({ ...phoneSettings(), project: config.load().vibe?.project || null }), answer: phoneAnswer, coding, remote,
+  agents ||= createAgents({ modelFor: (agent) => config.load().vibe?.models?.[agent] || null, onEvent: (e) => { agentPhone?.onEvent(e); if (agentsWin && !agentsWin.isDestroyed()) agentsWin.webContents.send('agents:event', e); }, log: (line) => console.log(line) });
+  agentPhone = createAgentPhone({
+    telegram, agents, settings: phoneSettings,
+    projectDir: agentProject, getResume: agentResume,
     setProject: (project) => updateConfig({ vibe: { ...config.load().vibe, project } }),
+    agentOf: (project) => config.load().vibe?.projects?.[project]?.agent || 'claude',
+    saveResume: (project, agent, id) => { const v = config.load().vibe || {}; if (v.resume?.[project]?.[agent] !== id) updateConfig({ vibe: { ...v, resume: { ...v.resume, [project]: { ...v.resume?.[project], [agent]: id } } } }); },
+    log: (line) => console.log(line),
+  });
+  phone = createPhone({
+    telegram, settings: () => ({ ...phoneSettings(), project: config.load().vibe?.project || null }), answer: phoneAnswer, coding, remote, hub: agentPhone,
+    setProject: (project) => updateConfig({ vibe: { ...config.load().vibe, project } }),
+    setGhost: (on) => updateConfig({ ghost: on }),
+    status: async () => phoneStatus(),
+    player: (action) => launch.media(action),
+    say: (text) => sendCommand('assistant-alert', { kind: 'phone', question: 'ข้อความจาก Telegram', text }),
+    onReply: (question, text) => { if (phoneSettings().pcVoice) sendCommand('assistant-alert', { kind: 'phone', question, text }); },
     checkPin: (pin) => Boolean(phoneSettings().pin) && /^\d{4,8}$/.test(pin) && pinHash(pin) === phoneSettings().pin, idleSeconds: () => powerMonitor.getSystemIdleTime(),
     transcribe: async (wav) => {
       const s = config.load().listening, keys = setup.openKeys(config.load().apiKeys);
@@ -1028,6 +1076,25 @@ function startPhone() {
   });
   if (!notifiers.includes(phoneNotify)) notifiers.push(phoneNotify);
   telegram.start();
+  if (setup.openKeys(config.load().apiKeys).telegram) telegram.setCommands(PHONE_COMMANDS).catch(() => {}); // the / menu in your chat
+}
+const PHONE_COMMANDS = [
+  ['status', 'ดูสถานะคอม'], ['help', 'ดูวิธีใช้'], ['new', 'เริ่มเรื่องใหม่ (หรือ /new claude โปรเจกต์ เริ่ม Agent สด)'],
+  ['agents', 'ดู Agent สดที่เปิดอยู่'], ['code', 'เปิด Agent สดของโปรเจกต์ที่เลือก'], ['projects', 'รายชื่อโปรเจกต์'],
+  ['interrupt', 'หยุดงานรอบนี้ของ Agent'], ['end', 'ปิด session ของ Agent'], ['chat', 'กลับมาคุยปกติ'], ['diff', 'ดูสิ่งที่ Agent แก้'],
+  ['screen', 'ดูหน้าจอคอม (ใส่ PIN)'], ['pc', 'สั่งงานคอม (ใส่ PIN)'], ['pcstop', 'หยุดงานบนคอม'],
+  ['say', 'ให้ตัวละครพูดข้อความบนคอม'], ['music', 'ควบคุมเพลง play pause next prev'], ['hide', 'ซ่อนตัวละครบนคอม'], ['show', 'เรียกตัวละครกลับ'],
+].map(([command, description]) => ({ command, description }));
+// what /status tells your phone
+function phoneStatus() {
+  const cfg = config.load(), sessions = agents?.list() || [], song = playingInfo;
+  return [
+    `🖥 คอมเปิดอยู่ · ไม่ได้แตะมา ${Math.round(powerMonitor.getSystemIdleTime() / 60)} นาที`,
+    song?.title ? `🎵 ${song.status === 'paused' ? '⏸' : '▶'} ${song.title}${song.artist ? ` — ${song.artist}` : ''}` : '🎵 ไม่มีเพลงที่เล่นอยู่',
+    computer?.busy ? '🤖 กำลังทำงานควบคุมเครื่อง' : null,
+    sessions.length ? `🧠 Agent สด: ${sessions.map((s) => `${s.agent}·${s.title}·${s.status}`).join(', ')}` : '🧠 ไม่มี Agent สดเปิดอยู่',
+    `👻 ${cfg.ghost ? 'ตัวละครซ่อนอยู่ (ทำงานเบื้องหลัง)' : 'ตัวละครแสดงอยู่'}${cfg.lockPos ? ' · ล็อกตำแหน่ง' : ''} · v${app.getVersion()}`,
+  ].filter(Boolean).join('\n');
 }
 const phoneNotify = (alert) => phone?.notify(alert);
 // LINE (Messaging API push): her alerts as text, when a channel token and your user ID are set
@@ -1051,18 +1118,6 @@ async function shotPage(url) {
     await new Promise((r) => setTimeout(r, 1500));
     return (await win.webContents.capturePage()).toPNG();
   } finally { win.destroy(); }
-}
-// a Vibecode tool that needs permission: your phone, else her bubble; no answer in 10 minutes is no
-function approveForVibe({ tool_name: tool, input = {}, project } = {}, token) {
-  if (token !== VIBE_TOKEN || typeof tool !== 'string') return Promise.resolve(false);
-  const args = typeof input === 'object' && input ? input : {};
-  if (phone && phoneSettings().chatId) return phone.confirm(phoneSettings().chatId, { server: project || 'code', name: tool }, args);
-  return new Promise((resolve) => {
-    const ask = randomUUID();
-    mcpAsks.set(ask, resolve);
-    sendCommand('mcp-confirm', { id: ask, tool: `${project}/${tool}`, detail: JSON.stringify(args).slice(0, 200) });
-    setTimeout(() => { if (mcpAsks.delete(ask)) resolve(false); }, 10 * 60000);
-  });
 }
 async function setTelegramToken(token) {
   token = String(token || '').trim();
@@ -1270,8 +1325,7 @@ function registerIpc() {
     notify: state => {
       overlay?.webContents.send('computer:state', state);
       // a job your phone started: its end goes back to your phone
-      if (state.id === remoteJob && ['done', 'error', 'stopped'].includes(state.status)) { remoteJob = null; phone?.notify({ kind: 'agent', message: `${state.status === 'done' ? '✅' : '⚠️'} งานบนคอม: ${state.message}${state.evidence ? `
-${state.evidence}` : ''}` }); }
+      if (state.id === remoteJob) { if (['done', 'error', 'stopped'].includes(state.status)) remoteJob = null; phone?.pcState(state); }
     },
     // her cursor: screen pixels (Windows) or points (Mac) into the overlay's own coordinates
     onPoint: (at) => { if (!overlay) return; const p = process.platform === 'win32' ? screen.screenToDipPoint(at) : at, b = overlay.getBounds(); sendCommand('computer-cursor', { x: p.x - b.x, y: p.y - b.y }); },
@@ -1309,10 +1363,13 @@ ${state.evidence}` : ''}` }); }
       if (!o.consent) return 'ยังไม่ได้อนุญาตควบคุมเครื่องบนคอม (หน้าควบคุมเครื่อง)';
       computerConfig = llmConfig(); computerModel = modelFor('computer', computerConfig);
       if (!computerModel) return 'ยังไม่ได้ตั้งค่า AI บนคอม';
-      remoteJob = computer.start({ task, consent: true, images: o.images, security: o.security, switches: o.switches });
+      remoteJob = computer.start({ task, consent: true, images: o.images, security: o.security, switches: o.switches, remote: true });
       notifyUser({ kind: 'info', message: `📱 งานจาก Telegram: ${task}` });
       return `เริ่มงานบนคอมแล้ว: ${task} — เสร็จแล้วจะบอก`;
     },
+    answer: (value) => computer.answer(value),
+    tell: (text) => (remoteJob ? computer.tell(text) : false),
+    stop: () => { if (!remoteJob) return false; computer.stop(); return true; },
     power: async (action) => { const a = { lock: 'lock', sleep: 'sleep', shutdown: 'shutdown', restart: 'restart' }[action]; return String(await systemTools({ tool: 'power', action: a }, { app: { window: 0 } }, AbortSignal.timeout(20000))); },
   };
   const computerOptions=()=>{const saved=config.load().computerControl||{};return {consent:saved.consent===true&&saved.provider===config.load().provider,voice:saved.voice===true,images:saved.images===true,security:SECURITY.includes(saved.security)?saved.security:'guarded',switches:validSwitches(saved.switches)||LEVELS[SECURITY.includes(saved.security)?saved.security:'guarded']};};
@@ -1379,6 +1436,7 @@ ${state.evidence}` : ''}` }); }
       patch.apiKeys = { ...config.load().apiKeys, [slot]: `enc:${safeStorage.encryptString(key.trim()).toString('base64')}` };
     }
     updateConfig(patch);
+    speech.warm(patch.speech); // Kokoro picked: loaded now, not at the first sentence
     return patch.speech;
   });
   // the key of the voice service in use (ElevenLabs shares the voice agent's)
@@ -1520,6 +1578,24 @@ ${state.evidence}` : ''}` }); }
   ipcMain.on('chat:stop', (_e, id) => chats.get(id)?.abort());
   ipcMain.on('rpc:reply', (_e, { id, ok, value, error } = {}) => { const call = rendererCalls.get(id); if (!call) return; rendererCalls.delete(id); ok ? call.resolve(value) : call.reject(new Error(error || 'ทำไม่สำเร็จ')); });
   ipcMain.handle('telegram:token', (_e, token) => setTelegramToken(token));
+  // her sessions window (agents.html)
+  const agentId = (id) => { if (typeof id !== 'string' || !/^[\w-]{1,40}$/.test(id)) throw new Error('session ไม่ถูกต้อง'); return id; };
+  ipcMain.handle('agents:list', () => agents.list());
+  ipcMain.handle('agents:history', (_e, id) => agents.history(agentId(id)));
+  ipcMain.handle('agents:projects', () => vibe.projects());
+  ipcMain.handle('agents:start', (_e, { agent, project, resume } = {}) => {
+    if (!['claude', 'codex'].includes(agent)) throw new Error('เลือก Agent ก่อน');
+    const from = resume ? agentResume(project, agent) : null;
+    if (resume && !from) throw new Error(`ยังไม่เคยมี session ${agent} ของ ${project}`);
+    return agents.start({ agent, cwd: agentProject(project), title: project, resume: from });
+  });
+  ipcMain.handle('agents:send', (_e, { id, text } = {}) => { if (typeof text !== 'string' || !text.trim() || text.length > 20000) throw new Error('ข้อความไม่ถูกต้อง'); return agents.send(agentId(id), text); });
+  ipcMain.handle('agents:answer', (_e, { id, askId, decision, text = '' } = {}) => {
+    if (!['allow', 'always', 'deny'].includes(decision) || typeof askId !== 'string' || typeof text !== 'string' || text.length > 4000) throw new Error('คำตอบไม่ถูกต้อง');
+    return agents.answer(agentId(id), askId, { decision, text });
+  });
+  ipcMain.handle('agents:interrupt', (_e, id) => agents.interrupt(agentId(id)));
+  ipcMain.handle('agents:close', (_e, id) => agents.close(agentId(id)));
   ipcMain.handle('value:set', (_e, { key, value } = {}) => {
     value = String(value ?? '').trim();
     if (value.length > 2000) throw new Error('ยาวเกินไป');
@@ -1851,6 +1927,7 @@ function main() {
     serveProtocol();
     registerIpc();
     createOverlay();
+    speech.warm(config.load().speech); // Kokoro, if it's her voice: loaded at the start
     createTray();
     windowWatch = startWindowWatch({
       overlay,
@@ -1873,7 +1950,6 @@ function main() {
         if (evt.hook_event_name === 'Stop' && !vibe?.projects().includes(where)) phone?.notify({ kind: 'agent', message: `${where}: ทำงานเสร็จแล้ว` });
       },
       onDebug: DEV ? debugHandler : null,
-      onApprove: approveForVibe,
     });
     const taken = registerHotkeys();
     if (taken.length) console.warn('[uncle] shortcuts taken by another app:', taken.join(', '));
@@ -1927,6 +2003,7 @@ function main() {
   });
 
   app.on('will-quit', () => {
+    agents?.closeAll();
     mcp?.stop();
     computer?.stop(); computerNative?.stop();
     speech.stop();

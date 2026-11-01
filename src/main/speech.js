@@ -66,7 +66,7 @@ function kokoroSynthesize(text, voice, rate, signal, cacheDir) {
       });
     `, { eval: true, workerData: { cacheDir, kokoro: require.resolve('kokoro-js'), phonemizer: require.resolve('phonemizer'), transformers: require.resolve('@huggingface/transformers') } });
     kokoroWorker.on('error', () => { kokoroWorker = null; });
-    kokoroWorker.on('exit', () => { kokoroWorker = null; });
+    kokoroWorker.on('exit', () => { kokoroWorker = null; warmed = false; });
     kokoroWorker.unref();
   }
   const worker = kokoroWorker, id = Math.random().toString(36).slice(2);
@@ -133,6 +133,7 @@ async function mac(action, payload, signal) {
     return { audio: (await fs.readFile(file)).toString('base64') };
   } finally { await fs.rm(dir, { recursive: true, force: true }); }
 }
+let warmed = false; // the Kokoro worker is up (or on its way)
 function createSpeech({ script = path.join(__dirname, 'speech.ps1'), fetcher = fetch, edge = edgeSynthesize, kokoro = kokoroSynthesize, kokoroDir = () => path.join(os.tmpdir(), 'uncle-kokoro') } = {}) {
   let running = null;
   let cachedVoices = null;
@@ -215,6 +216,13 @@ function createSpeech({ script = path.join(__dirname, 'speech.ps1'), fetcher = f
       return { audio: bytes.toString('base64') };
     } finally { clearTimeout(timeout); if (running === controller) running = null; }
   }
-  return { voices, speak, stop };
+  // Kokoro loaded ahead (its model takes seconds to start): one tiny line, so the first real one is quick
+  function warm(options) {
+    const settings = speechSettings(options);
+    if (settings.provider !== 'kokoro' || warmed) return;
+    warmed = true;
+    kokoro('hi', KOKORO_VOICES.some((v) => v.id === settings.voice) ? settings.voice : 'af_heart', 1, AbortSignal.timeout(180000), kokoroDir()).catch(() => { warmed = false; });
+  }
+  return { voices, speak, stop, warm };
 }
 module.exports = { createSpeech, parseSayVoices, KOKORO_VOICES, PROVIDERS, speechSettings, DEFAULT_SPEECH, CLOUD_VOICES, EDGE_VOICES };
