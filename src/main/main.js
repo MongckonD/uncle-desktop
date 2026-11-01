@@ -59,7 +59,20 @@ async function callTool(server, name, args, options) {
 const crypto = require('node:crypto');
 const VIBE_TOKEN = crypto.randomBytes(24).toString('hex'); // only her own Vibecode jobs may ask for approvals
 let vibe = null; // Vibecode: projects and their coding agents, run from your phone
-let agents = null, agentPhone = null; // her live coding-agent sessions (agents.js), and your phone's view of them
+let agents = null, agentPhone = null, agentsWin = null; // her live coding-agent sessions (agents.js), your phone's view of them, and the computer's
+const agentProject = (name) => { const dir = vibe.dirOf(name); if (!fs.existsSync(dir)) throw new Error(`ไม่มีโปรเจกต์ ${name} · /projects ดูรายชื่อ หรือ /create ${name}`); return dir; };
+const agentResume = (project, agent) => config.load().vibe?.resume?.[project]?.[agent] || null;
+// the sessions window: a normal one (clicks and typing), the same sessions as your phone's
+function openAgentsWindow() {
+  if (agentsWin && !agentsWin.isDestroyed()) { agentsWin.show(); agentsWin.focus(); return; }
+  agentsWin = new BrowserWindow({
+    width: 980, height: 680, minWidth: 640, minHeight: 420, title: 'Coding Agent สด', backgroundColor: '#15131c', autoHideMenuBar: true,
+    icon: path.join(ROOT, 'assets', 'icons', process.platform === 'win32' ? 'uncle.ico' : 'uncle.png'),
+    webPreferences: { preload: path.join(__dirname, '..', 'agents-preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  agentsWin.loadFile(path.join(__dirname, '..', 'renderer', 'agents.html'));
+  agentsWin.on('closed', () => { agentsWin = null; });
+}
 const pinHash = (pin) => crypto.createHash('sha256').update(`uncle:${pin}`).digest('hex');
 let telegram = null, phone = null; // your phone, through her Telegram bot
 let remote = null, remoteJob = null; // the computer from your phone (screen, a job, power), and the job it started
@@ -896,6 +909,7 @@ function rebuildTray() {
     { label: t.sync(Math.min(100, Math.floor(xp / 10)), t.stages[stage]), enabled: false },
     { type: 'separator' },
     { label: t.talk, click: () => sendCommand('chat') },
+    { label: th ? 'Coding Agent สด (Claude Code / Codex)…' : 'Live coding agents (Claude Code / Codex)…', click: () => openAgentsWindow() },
     { label: th ? 'เริ่มพูด / ปิดไมค์' : 'Talk / stop mic', accelerator: hotkeys().voice || undefined, click: () => sendCommand('listening-toggle') },
     // the mic in one of its three ways, started at once
     { label: th ? 'โหมดไมค์' : 'Mic mode', submenu: [
@@ -1027,11 +1041,12 @@ function startPhone() {
     port: PORT, token: VIBE_TOKEN, log: (line) => console.log(line),
   });
   const coding = { ...vibe, shot: shotPage };
-  agents ||= createAgents({ modelFor: (agent) => config.load().vibe?.models?.[agent] || null, onEvent: (e) => { agentPhone?.onEvent(e); overlay?.webContents.send('agents:event', e); }, log: (line) => console.log(line) });
+  agents ||= createAgents({ modelFor: (agent) => config.load().vibe?.models?.[agent] || null, onEvent: (e) => { agentPhone?.onEvent(e); if (agentsWin && !agentsWin.isDestroyed()) agentsWin.webContents.send('agents:event', e); }, log: (line) => console.log(line) });
   agentPhone = createAgentPhone({
     telegram, agents, settings: phoneSettings,
-    projectDir: (name) => { const dir = vibe.dirOf(name); if (!fs.existsSync(dir)) throw new Error(`ไม่มีโปรเจกต์ ${name} · /projects ดูรายชื่อ หรือ /create ${name}`); return dir; },
-    getResume: (project, agent) => config.load().vibe?.resume?.[project]?.[agent] || null,
+    projectDir: agentProject, getResume: agentResume,
+    setProject: (project) => updateConfig({ vibe: { ...config.load().vibe, project } }),
+    agentOf: (project) => config.load().vibe?.projects?.[project]?.agent || 'claude',
     saveResume: (project, agent, id) => { const v = config.load().vibe || {}; if (v.resume?.[project]?.[agent] !== id) updateConfig({ vibe: { ...v, resume: { ...v.resume, [project]: { ...v.resume?.[project], [agent]: id } } } }); },
     log: (line) => console.log(line),
   });
@@ -1552,6 +1567,24 @@ function registerIpc() {
   ipcMain.on('chat:stop', (_e, id) => chats.get(id)?.abort());
   ipcMain.on('rpc:reply', (_e, { id, ok, value, error } = {}) => { const call = rendererCalls.get(id); if (!call) return; rendererCalls.delete(id); ok ? call.resolve(value) : call.reject(new Error(error || 'ทำไม่สำเร็จ')); });
   ipcMain.handle('telegram:token', (_e, token) => setTelegramToken(token));
+  // her sessions window (agents.html)
+  const agentId = (id) => { if (typeof id !== 'string' || !/^[\w-]{1,40}$/.test(id)) throw new Error('session ไม่ถูกต้อง'); return id; };
+  ipcMain.handle('agents:list', () => agents.list());
+  ipcMain.handle('agents:history', (_e, id) => agents.history(agentId(id)));
+  ipcMain.handle('agents:projects', () => vibe.projects());
+  ipcMain.handle('agents:start', (_e, { agent, project, resume } = {}) => {
+    if (!['claude', 'codex'].includes(agent)) throw new Error('เลือก Agent ก่อน');
+    const from = resume ? agentResume(project, agent) : null;
+    if (resume && !from) throw new Error(`ยังไม่เคยมี session ${agent} ของ ${project}`);
+    return agents.start({ agent, cwd: agentProject(project), title: project, resume: from });
+  });
+  ipcMain.handle('agents:send', (_e, { id, text } = {}) => { if (typeof text !== 'string' || !text.trim() || text.length > 20000) throw new Error('ข้อความไม่ถูกต้อง'); return agents.send(agentId(id), text); });
+  ipcMain.handle('agents:answer', (_e, { id, askId, decision, text = '' } = {}) => {
+    if (!['allow', 'always', 'deny'].includes(decision) || typeof askId !== 'string' || typeof text !== 'string' || text.length > 4000) throw new Error('คำตอบไม่ถูกต้อง');
+    return agents.answer(agentId(id), askId, { decision, text });
+  });
+  ipcMain.handle('agents:interrupt', (_e, id) => agents.interrupt(agentId(id)));
+  ipcMain.handle('agents:close', (_e, id) => agents.close(agentId(id)));
   ipcMain.handle('value:set', (_e, { key, value } = {}) => {
     value = String(value ?? '').trim();
     if (value.length > 2000) throw new Error('ยาวเกินไป');

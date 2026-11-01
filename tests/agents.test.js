@@ -41,7 +41,7 @@ test('agents: Claude Code session — talks, asks for a tool, gets your yes, fin
   assert.deepEqual([ask.kind, ask.title], ['permission', 'Write: a.txt']);
   agents.answer(id, ask.askId, { decision: 'allow' }); await tick();
   assert.equal(runs[0].got.at(-1).response.response.behavior, 'allow');
-  assert.deepEqual(events.map((e) => e.type), ['session', 'text', 'tool', 'ask', 'turn']);
+  assert.deepEqual(events.map((e) => e.type), ['session', 'text', 'tool', 'ask', 'answered', 'turn']);
   assert.equal(agents.list()[0].resume, 'c-1');
   agents.close(id); await tick();
   assert.equal(agents.list().length, 0);
@@ -72,6 +72,6 @@ test('agents: Codex session — thread, turn, an approval declined, steering whi
   assert.equal(runs[0].got.find((m) => m.method === 'turn/steer').params.expectedTurnId, 'u-1');
   agents.answer(id, '0', { decision: 'deny' }); await tick();
   assert.deepEqual(runs[0].got.find((m) => m.id === 0).result, { decision: 'decline' });
-  assert.deepEqual(events.map((e) => e.type), ['session', 'tool', 'ask', 'text', 'turn']);
+  assert.deepEqual(events.map((e) => e.type), ['session', 'tool', 'ask', 'answered', 'text', 'turn']);
   assert.equal(agents.list()[0].status, 'idle');
 });

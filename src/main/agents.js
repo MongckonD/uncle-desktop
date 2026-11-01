@@ -143,12 +143,13 @@ function createAgents({ onEvent = () => {}, run = spawn, modelFor = () => null, 
     const driver = DRIVERS[agent];
     if (!driver) throw new Error(`ไม่รู้จัก Agent: ${agent}`);
     const id = randomUUID().slice(0, 8);
-    const s = { id, agent, cwd, title: title || cwd, status: 'starting', resume, asks: new Map(), started: Date.now() };
+    const s = { id, agent, cwd, title: title || cwd, status: 'starting', resume, asks: new Map(), started: Date.now(), log: [] };
     const emit = (evt) => {
       if (evt.type === 'session') s.resume = evt.resume;
       if (evt.type === 'ask') { s.asks.set(evt.askId, evt); s.status = 'asking'; }
       if (evt.type === 'turn') s.status = 'idle';
       if (evt.type === 'text' || evt.type === 'tool') s.status = s.asks.size ? 'asking' : 'working';
+      s.log.push(evt); if (s.log.length > 300) s.log.shift(); // for a window opened later
       onEvent({ id, ...evt });
     };
     s.driver = driver({ cwd, resume, model: model || modelFor(agent), run, emit });
@@ -164,7 +165,16 @@ function createAgents({ onEvent = () => {}, run = spawn, modelFor = () => null, 
   return {
     start,
     async send(id, text) { const s = get(id); s.status = 'working'; await s.driver.send(text); },
-    answer(id, askId, value) { const s = get(id); const ok = s.driver.answer(askId, value); s.asks.delete(askId); if (!s.asks.size && s.status === 'asking') s.status = 'working'; return ok; },
+    answer(id, askId, value) {
+      const s = get(id);
+      if (!s.asks.delete(askId)) return false; // answered already (on the other side)
+      if (!s.asks.size && s.status === 'asking') s.status = 'working';
+      const evt = { type: 'answered', askId, decision: value.decision, text: value.text || '' };
+      s.log.push(evt);
+      onEvent({ id, ...evt }); // the other side (phone, computer) closes its question
+      return s.driver.answer(askId, value);
+    },
+    history: (id) => [...(sessions.get(id)?.log || [])],
     interrupt(id) { get(id).driver.interrupt(); },
     close(id) { const s = sessions.get(id); if (!s) return false; s.driver.child.stdin.end(); setTimeout(() => s.driver.child.kill(), 3000).unref?.(); return true; },
     closeAll() { for (const id of [...sessions.keys()]) this.close(id); },

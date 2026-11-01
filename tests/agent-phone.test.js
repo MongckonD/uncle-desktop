@@ -62,3 +62,14 @@ test('agent phone: permissions without buttons when approving from the phone is 
   await hub.onEvent({ id: 's1', type: 'ask', askId: '0', kind: 'permission', title: 'rm -rf x' });
   assert.ok(tg.out.at(-1).text.includes('ตอบบนคอม') && !tg.out.at(-1).buttons);
 });
+
+test('agent phone: Vibecode /code opens the project live session (picked up again when it can be) and its commands follow', async () => {
+  const tg = fakeTelegram(), agents = fakeAgents(), picked = [];
+  const hub = createAgentPhone({ telegram: tg, agents, settings: () => ({ chatId: 1, switches: { approve: true } }), projectDir: (p) => p,
+    getResume: (p, a) => (p === 'shop' && a === 'codex' ? 'old' : null), agentOf: () => 'codex', setProject: (p) => picked.push(p) });
+  await hub.open(1, 'shop');
+  assert.deepEqual(agents.calls[0], ['start', 'codex', 'shop', 'old']);
+  await hub.open(1, 'shop'); // open already: just picked
+  assert.equal(agents.calls.length, 1);
+  assert.deepEqual(picked, ['shop', 'shop']);
+});

@@ -14,7 +14,9 @@ const HELP = `🧠 Agent สด (Claude Code / Codex แบบ Remote Control):
 
 const short = (v, n) => { const s = String(v ?? '').trim(); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
 
-function createAgentPhone({ telegram, agents, settings, projectDir, getResume = () => null, saveResume = () => {}, log = () => {} }) {
+// setProject(name): the session you pick is Vibecode's project too (/diff, /commit, /pr, /undo on it);
+// agentOf(project): the agent a Vibecode project was made with
+function createAgentPhone({ telegram, agents, settings, projectDir, getResume = () => null, saveResume = () => {}, setProject = () => {}, agentOf = () => 'claude', log = () => {} }) {
   let current = null; // the session what you send goes to
   let typed = null;   // a question of its that your next message answers: an asks key
   const live = new Map(); // session -> { lines, last, messageId, timer, sending }
@@ -74,6 +76,15 @@ function createAgentPhone({ telegram, agents, settings, projectDir, getResume = 
       await telegram.send(chat(), e.status === 'error' ? `⚠️ ${label(id)}: ${e.text || 'ทำไม่สำเร็จ'}` : `✅ ${label(id)}\n${short(l?.last || 'เสร็จแล้ว', 3500)}`).catch(() => {});
       return;
     }
+    if (e.type === 'answered') { // answered on the computer: its buttons here go
+      for (const [key, a] of asks) {
+        if (a.id !== id || a.askId !== e.askId) continue;
+        asks.delete(key); if (typed === key) typed = null;
+        if (a.messageId) await telegram.edit(chat(), a.messageId, `${a.kind === 'question' ? '❓' : '🔐'} ${label(id)}
+→ ตอบบนคอมแล้ว`).catch(() => {});
+      }
+      return;
+    }
     if (e.type === 'closed') {
       live.delete(id);
       for (const [key, a] of asks) if (a.id === id) asks.delete(key);
@@ -117,14 +128,14 @@ function createAgentPhone({ telegram, agents, settings, projectDir, getResume = 
         if (!['claude', 'codex'].includes(agent) || !project) { await telegram.send(chatId, `ใช้แบบนี้: ${cmd} claude ชื่อโปรเจกต์ (หรือ codex)`); return true; }
         const resume = cmd === '/resume' ? getResume(project, agent) : null;
         if (cmd === '/resume' && !resume) { await telegram.send(chatId, `ยังไม่เคยมี session ${agent} ของ ${project} · ใช้ /new`); return true; }
-        current = agents.start({ agent, cwd: projectDir(project), title: project, resume });
+        current = agents.start({ agent, cwd: projectDir(project), title: project, resume }); setProject(project);
         await telegram.send(chatId, `🧠 ${cmd === '/resume' ? 'ต่อ' : 'เริ่ม'} ${agent} ใน ${project} แล้ว (${current}) · พิมพ์หรือส่งเสียงสั่งงานได้เลย`);
         if (task.length) await agents.send(current, task.join(' '));
         return true;
       }
       case '/use':
         if (!info(rest[0])) { await telegram.send(chatId, 'ไม่มี session นี้ · /agents ดูรายชื่อ'); return true; }
-        current = rest[0]; await telegram.send(chatId, `▶ ${label(current)}`); return true;
+        current = rest[0]; setProject(info(current).title); await telegram.send(chatId, `▶ ${label(current)}`); return true;
       case '/interrupt':
         if (current) agents.interrupt(current);
         await telegram.send(chatId, current ? 'สั่งหยุดรอบนี้แล้ว' : 'ยังไม่ได้เลือก session'); return true;
@@ -142,7 +153,14 @@ function createAgentPhone({ telegram, agents, settings, projectDir, getResume = 
     return true;
   }
 
-  return { onEvent, command, callback, get current() { return current; }, HELP };
+  // Vibecode's /code and /create: the project's live session (open already, or picked up again, or new)
+  async function open(chatId, project, agent = agentOf(project)) {
+    const live = agents.list().find((s) => s.title === project && s.agent === agent);
+    if (live) { current = live.id; setProject(project); return telegram.send(chatId, `▶ ${label(current)} · พิมพ์หรือส่งเสียงสั่งงานได้เลย · /chat เพื่อกลับ`); }
+    return command(chatId, `${getResume(project, agent) ? '/resume' : '/new'} ${agent} ${project}`);
+  }
+
+  return { onEvent, command, callback, open, get current() { return current; }, HELP };
 }
 
 module.exports = { createAgentPhone, HELP };

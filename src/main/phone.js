@@ -77,9 +77,9 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
     const pinned = async (run) => (checkPin(rest.at(-1) || '') ? run() : telegram.send(chatId, 'คำสั่งนี้ต้องใส่ PIN ต่อท้าย เช่น /pr 1234 (ตั้ง PIN ได้ในแท็บ Telegram บนคอม)'));
     switch (cmd) {
       case '/projects': { const list = coding.projects(); return telegram.send(chatId, list.length ? list.map((p) => `${p === project ? '▶' : '•'} ${p}${coding.busy(p) ? ' (กำลังทำงาน)' : ''}`).join('\n') : 'ยังไม่มีโปรเจกต์ · /create ชื่อ'); }
-      case '/create': { const [name, agent] = rest; await coding.create(name, agent); setProject(name); mode = 'code'; return telegram.send(chatId, `สร้าง ${name} แล้ว (${agent === 'codex' ? 'Codex' : 'Claude Code'}) · อยู่ในโหมดเขียนโค้ด บอกได้เลยว่าจะทำอะไร`); }
+      case '/create': { const [name, agent] = rest; await coding.create(name, agent); setProject(name); if (hub) return hub.open(chatId, name, agent === 'codex' ? 'codex' : 'claude'); mode = 'code'; return telegram.send(chatId, `สร้าง ${name} แล้ว (${agent === 'codex' ? 'Codex' : 'Claude Code'}) · อยู่ในโหมดเขียนโค้ด บอกได้เลยว่าจะทำอะไร`); }
       case '/project': { if (!coding.projects().includes(arg)) return telegram.send(chatId, `ไม่มีโปรเจกต์ ${arg}`); setProject(arg); return telegram.send(chatId, `เลือก ${arg} แล้ว · /code เพื่อสั่งงาน`); }
-      case '/code': mode = 'code'; return telegram.send(chatId, `💻 โหมดเขียนโค้ด${project ? `: ${project}` : ''} · ข้อความ เสียง และรูปจะส่งให้ Agent · /chat เพื่อกลับ`);
+      case '/code': if (hub && project) return hub.open(chatId, project); mode = 'code'; return telegram.send(chatId, `💻 โหมดเขียนโค้ด${project ? `: ${project}` : ''} · ข้อความ เสียง และรูปจะส่งให้ Agent · /chat เพื่อกลับ`);
       case '/chat': mode = 'chat'; return telegram.send(chatId, 'กลับมาคุยปกติแล้ว');
       case '/stop': return telegram.send(chatId, coding.stop(need()) ? 'หยุดแล้ว' : 'ไม่มีงานที่กำลังทำ');
       case '/diff': { const d = await coding.diff(need()); await telegram.send(chatId, `📝 ${d.stat}`); if (d.text) await telegram.sendFile(chatId, 'document', Buffer.from(d.text), `${project}.diff`, 'text/plain'); return undefined; }
