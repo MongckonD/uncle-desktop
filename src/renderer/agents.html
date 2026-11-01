@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'">
+  <title>Coding Agent สด</title>
+  <link rel="stylesheet" href="styles/agents.css">
+</head>
+<body>
+  <aside class="sessions">
+    <h1>Coding Agent สด</h1>
+    <form id="new">
+      <label>Agent <select id="agent"><option value="claude">Claude Code</option><option value="codex">Codex</option></select></label>
+      <label>โปรเจกต์ <select id="project"></select></label>
+      <div class="row"><button type="submit">เริ่มใหม่</button><button type="button" id="resume">ต่อจากครั้งก่อน</button></div>
+    </form>
+    <ul id="list" aria-label="session ที่เปิดอยู่"></ul>
+    <p class="hint">session เดียวกับใน Telegram (/agents) ตอบที่ไหนก่อนก็ได้</p>
+  </aside>
+  <main>
+    <header><span id="title">เลือกหรือเริ่ม session</span><span class="tools"><button id="interrupt" disabled>หยุดรอบนี้</button><button id="end" disabled>ปิด session</button></span></header>
+    <ol id="log" aria-live="polite"></ol>
+    <form id="say"><textarea id="text" rows="2" placeholder="สั่งงาน (Enter ส่ง · Shift+Enter ขึ้นบรรทัด) · ระหว่างทำงาน = พิมพ์แทรก" disabled></textarea><button type="submit" disabled>ส่ง</button></form>
+    <p id="error" role="alert"></p>
+  </main>
+  <script src="js/agents-window.js"></script>
+</body>
+</html>

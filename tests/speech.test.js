@@ -86,3 +86,21 @@ test('ElevenLabs, Fish and your own server: their endpoints, keys and consent; a
   await assert.rejects(speech.speak('hi', { provider: 'custom', customUrl: 'https://tts.example.com' }, ''), /ยินยอม/);
   assert.throws(() => speechSettings({ provider: 'windows', pitch: 40 }), /ปรับเสียง/);
 });
+
+test('streamed speech: pieces end at sentences, decimals stay whole, code waits, long runs break at a space, the end says the rest', async () => {
+  const { nextSpeakable } = await import(pathToFileURL(path.join(__dirname, '../src/renderer/js/speech.js')).href);
+  const all = (text, final) => { const out = []; let at = 0; for (let n; (n = nextSpeakable(text, at, final));) { out.push(n.chunk.trim()); at = n.end; } return out; };
+  assert.deepEqual(all('Hello there. How are you today? Fine'), ['Hello there.', 'How are you today?']); // the last words wait: it may not be over
+  assert.deepEqual(all('Hello there. How are you today? Fine', true), ['Hello there.', 'How are you today?', 'Fine']);
+  assert.deepEqual(all('It costs 3.5 baht today. Next'), ['It costs 3.5 baht today.']);
+  assert.deepEqual(all('Hi. This one is longer than that. Ok'), ['Hi. This one is longer than that.']); // too short alone: joined with the next
+  assert.deepEqual(all('สวัสดีครับวันนี้อากาศดีมาก\nแล้วคุณล่ะ'), ['สวัสดีครับวันนี้อากาศดีมาก']);
+  assert.deepEqual(all('เล่าให้ฟังหน่อยนะ。ต่อไปคือเรื่องที่สอง'), ['เล่าให้ฟังหน่อยนะ。']);
+  assert.deepEqual(all('Here is the fix.\n```js\nsecret(); // not read. really not.\n'), ['Here is the fix.']); // an open code block waits
+  assert.deepEqual(all('Done now. ```js\nx. y. z.\n``` Then more text.'), []); // stops inside a block aren't stops
+  assert.deepEqual(all('Done now, really done. ```js\nx. y.\n``` Then more text. Okay'), ['Done now, really done.', '```js\nx. y.\n``` Then more text.']);
+  const long = `${'word '.repeat(40)}end`; // 205 characters, no stop
+  assert.ok(nextSpeakable(long, 0).chunk.length <= 140 && nextSpeakable(long, 0).chunk.endsWith('word'));
+  assert.equal(nextSpeakable('x. y', 0), null);
+  assert.equal(nextSpeakable('   ', 0, true), null);
+});

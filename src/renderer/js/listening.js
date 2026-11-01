@@ -188,6 +188,12 @@ export class Listening {
     await this.capture(serial);
   }
   async capture(serial = this.serial) {
+    // one mic at a time: a second capture would leave the first one open for good
+    if (this.capturing) return;
+    this.capturing = true;
+    try { await this.openMic(serial); } finally { this.capturing = false; }
+  }
+  async openMic(serial) {
     const s = this.settings;
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: s.deviceId ? { exact: s.deviceId } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
@@ -270,7 +276,11 @@ export class Listening {
       if (!text.trim()) return;
       this.transcript.value = text; this.sendButton.disabled = false; this.pending = true;
       if (this.settings.review) { this.setStatus('ตรวจข้อความแล้วกดส่ง หรือยกเลิก'); await this.show(); }
-      else await this.submit();
+      else {
+        await this.submit();
+        // not sent (she was still answering something else): let go of it, or the mic never hears again
+        if (this.pending && !this.settings.review) { this.pending = false; this.lastResultStatus = 'ยังตอบเรื่องก่อนหน้าอยู่ — พูดใหม่อีกครั้งหลังตอบเสร็จ'; }
+      }
       if (this.settings.mode === 'push' && serial === this.serial && !this.confirmation && !this.externalJob) this.releaseMic();
     } catch (error) { if (serial === this.serial && (!confirmation || this.confirmation === confirmation)) this.error(error,{recoverable:true}); }
     finally { if (serial === this.serial) { this.processing = false; if (!this.pending && this.stream && !waking) this.idle(); } }

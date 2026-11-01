@@ -69,13 +69,12 @@ function createNews({ getSettings, seenFile, fetcher = fetch, now = () => Date.n
   }
   const markSeen = (items) => { for (const it of items) loadSeen().add(it.key); saveSeen(); };
 
-  // every topic (and your feeds): { topic: [stories] }, the ones found marked seen
+  // every topic (and your feeds): { topic: [stories] }
   async function gather() {
     const s = getSettings(), out = {};
     for (const t of s.topics || []) out[t] = await topic(t);
     if (s.feeds?.length) out[s.lang === 'en' ? 'Your feeds' : 'ฟีดของคุณ'] = await feeds();
-    markSeen(Object.values(out).flat());
-    return out;
+    return out; // marked seen by whoever shows them (markSeen)
   }
   // breaking news: new stories with any of your alert words in the title
   async function breaking() {

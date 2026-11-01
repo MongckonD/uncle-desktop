@@ -24,6 +24,7 @@ function createBriefs({ news, mcp, ai, notify, getConfig, getTasks = () => [], n
     const all = Object.values(byTopic).flat();
     if (!all.length) { if (asked) notify({ kind: 'news', title: '📰 ยังไม่มีข่าวใหม่ในหัวข้อที่ติดตาม', text: '' }); return ''; }
     const text = await ai(NEWS_PROMPT, asText(byTopic));
+    news.markSeen(all); // only now: a failed summary shows them next time
     notify({ kind: 'news', title: '📰 สรุปข่าว', text, links: all.slice(0, 6).map((it) => ({ title: it.title, link: it.link })) });
     return text;
   }

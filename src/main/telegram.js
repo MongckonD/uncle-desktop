@@ -63,6 +63,7 @@ function createTelegram({ getToken, getChat, getAllowedUsers, setChat, onMessage
     if (m.voice || m.audio) return deliver({ kind: 'voice', fileId: (m.voice || m.audio).file_id, mime: (m.voice || m.audio).mime_type || 'audio/ogg', chatId, caption: m.caption || '' });
     if (m.photo?.length) return deliver({ kind: 'photo', fileId: m.photo.at(-1).file_id, mime: 'image/jpeg', chatId, caption: m.caption || '' });
     if (m.document?.mime_type?.startsWith('image/')) return deliver({ kind: 'photo', fileId: m.document.file_id, mime: m.document.mime_type, chatId, caption: m.caption || '' });
+    if (m.document) return deliver({ kind: 'file', fileId: m.document.file_id, name: m.document.file_name || 'file', mime: m.document.mime_type || '', size: m.document.file_size || 0, chatId, caption: m.caption || '' });
     if (m.video || m.video_note || m.animation) { const v = m.video || m.video_note || m.animation; return deliver({ kind: 'video', fileId: v.file_id, mime: v.mime_type || 'video/mp4', size: v.file_size || 0, chatId, caption: m.caption || '' }); }
     if (text) return deliver({ kind: 'text', text, chatId });
     return send(chatId, 'ยังรับข้อความแบบนี้ไม่ได้ ส่งเป็นข้อความ เสียง รูป หรือวิดีโอนะ');
@@ -86,9 +87,13 @@ function createTelegram({ getToken, getChat, getAllowedUsers, setChat, onMessage
   }
 
   // text, with buttons: [[{ text, data } | { text, url }]]
+  const markup = (buttons) => (buttons?.length ? { inline_keyboard: buttons.map((row) => row.map((b) => (b.url ? { text: b.text, url: b.url } : { text: b.text, callback_data: b.data }))) } : undefined);
   function send(chatId, text, buttons) {
-    const reply_markup = buttons?.length ? { inline_keyboard: buttons.map((row) => row.map((b) => (b.url ? { text: b.text, url: b.url } : { text: b.text, callback_data: b.data }))) } : undefined;
-    return call('sendMessage', { chat_id: chatId, text: String(text).slice(0, 4000), reply_markup, disable_web_page_preview: true });
+    return call('sendMessage', { chat_id: chatId, text: String(text).slice(0, 4000), reply_markup: markup(buttons), disable_web_page_preview: true });
+  }
+  // a message already sent, rewritten (her live progress, a question answered)
+  function edit(chatId, messageId, text, buttons) {
+    return call('editMessageText', { chat_id: chatId, message_id: messageId, text: String(text).slice(0, 4000), reply_markup: markup(buttons) || { inline_keyboard: [] }, disable_web_page_preview: true });
   }
   // a file: kind 'photo' | 'audio' | 'video' | 'document'
   function sendFile(chatId, kind, bytes, name, mime, caption = '') {
@@ -98,14 +103,17 @@ function createTelegram({ getToken, getChat, getAllowedUsers, setChat, onMessage
     form.set(kind, new Blob([bytes], { type: mime }), name);
     return call({ photo: 'sendPhoto', audio: 'sendAudio', video: 'sendVideo', document: 'sendDocument' }[kind], {}, { form });
   }
+  // the menu Telegram shows when you type /: [{ command, description }]
+  const setCommands = (commands) => call('setMyCommands', { commands });
   const typing = (chatId, action = 'typing') => call('sendChatAction', { chat_id: chatId, action }).catch(() => {});
 
   return {
     start() { if (running || !getToken()) return; running = true; loop(); },
     stop() { running = false; controller?.abort(); },
     get running() { return running; },
+    edit,
     me: () => call('getMe'),
-    startPairing, send, sendFile, typing, download, handle,
+    startPairing, send, sendFile, typing, download, handle, setCommands,
   };
 }
 

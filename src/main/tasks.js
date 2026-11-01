@@ -14,7 +14,7 @@ function createTasks({ file, now = () => Date.now() }) {
     text = String(text || '').trim().slice(0, 300);
     if (!text) throw new Error('ไม่มีชื่องาน');
     const when = due ? Date.parse(due) : NaN;
-    const task = { id: now().toString(36), text, due: Number.isFinite(when) ? when : null, done: false, nagged: false };
+    const task = { id: now().toString(36) + Math.random().toString(36).slice(2, 6), text, due: Number.isFinite(when) ? when : null, done: false, nagged: false };
     save([...load(), task]);
     return task;
   }

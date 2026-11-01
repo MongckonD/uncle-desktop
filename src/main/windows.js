@@ -64,6 +64,7 @@ function startWindowWatch({ overlay, onUpdate, onPlaying = () => {} }) {
       } catch {
         return;
       }
+      restarts = 0; // it works: a later crash gets its three tries again
       if (data.playing) return onPlaying(data.playing);
       last = data;
       send();

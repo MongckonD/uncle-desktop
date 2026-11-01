@@ -37,7 +37,7 @@ function readJson(req) {
   });
 }
 
-function createBridge({ port, onEvent, onDebug, onApprove }) {
+function createBridge({ port, onEvent, onDebug }) {
   const server = http.createServer(async (req, res) => {
     // Browsers always send an Origin header on cross-site requests; hooks never do.
     // Refusing those keeps random web pages from puppeting Capri.
@@ -59,16 +59,6 @@ function createBridge({ port, onEvent, onDebug, onApprove }) {
         return send(res, 200, { ok: true });
       } catch (err) {
         return send(res, 400, { ok: false, error: err.message });
-      }
-    }
-
-    // a Vibecode job's Claude Code asking leave for a tool (hooks/uncle-approve-mcp.js): its token, then your answer
-    if (onApprove && req.method === 'POST' && url.pathname === '/approve') {
-      try {
-        const body = await readJson(req);
-        return send(res, 200, { allow: await onApprove(body, req.headers['x-uncle-token']) });
-      } catch {
-        return send(res, 200, { allow: false });
       }
     }
 

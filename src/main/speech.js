@@ -66,12 +66,16 @@ function kokoroSynthesize(text, voice, rate, signal, cacheDir) {
       });
     `, { eval: true, workerData: { cacheDir, kokoro: require.resolve('kokoro-js'), phonemizer: require.resolve('phonemizer'), transformers: require.resolve('@huggingface/transformers') } });
     kokoroWorker.on('error', () => { kokoroWorker = null; });
+    kokoroWorker.on('exit', () => { kokoroWorker = null; warmed = false; });
     kokoroWorker.unref();
   }
   const worker = kokoroWorker, id = Math.random().toString(36).slice(2);
   return new Promise((resolve, reject) => {
-    const done = (msg) => { if (msg.id !== id) return; worker.off('message', done); signal.removeEventListener('abort', abort); msg.error ? reject(new Error(`Kokoro สร้างเสียงไม่สำเร็จ: ${msg.error.slice(0, 120)}`)) : resolve({ audio: msg.audio }); };
-    const abort = () => { worker.off('message', done); reject(new Error('หยุดเสียงแล้ว')); };
+    // the worker dying (an error, out of memory) ends this line too, instead of 3 minutes of silence
+    const dead = () => { worker.off('message', done); signal.removeEventListener('abort', abort); reject(new Error('Kokoro หยุดทำงาน ลองอีกครั้ง')); };
+    worker.once('exit', dead);
+    const done = (msg) => { if (msg.id !== id) return; worker.off('message', done); worker.off('exit', dead); signal.removeEventListener('abort', abort); msg.error ? reject(new Error(`Kokoro สร้างเสียงไม่สำเร็จ: ${msg.error.slice(0, 120)}`)) : resolve({ audio: msg.audio }); };
+    const abort = () => { worker.off('message', done); worker.off('exit', dead); reject(new Error('หยุดเสียงแล้ว')); };
     worker.on('message', done); signal.addEventListener('abort', abort, { once: true });
     // Chinese voices also get each Thai syllable's tone
     worker.postMessage({ id, text, runs: THAI.test(text) ? thaiRuns(text, { tones: voice[0] === 'z' }) : null, voice, speed: rate });
@@ -129,6 +133,7 @@ async function mac(action, payload, signal) {
     return { audio: (await fs.readFile(file)).toString('base64') };
   } finally { await fs.rm(dir, { recursive: true, force: true }); }
 }
+let warmed = false; // the Kokoro worker is up (or on its way)
 function createSpeech({ script = path.join(__dirname, 'speech.ps1'), fetcher = fetch, edge = edgeSynthesize, kokoro = kokoroSynthesize, kokoroDir = () => path.join(os.tmpdir(), 'uncle-kokoro') } = {}) {
   let running = null;
   let cachedVoices = null;
@@ -211,6 +216,13 @@ function createSpeech({ script = path.join(__dirname, 'speech.ps1'), fetcher = f
       return { audio: bytes.toString('base64') };
     } finally { clearTimeout(timeout); if (running === controller) running = null; }
   }
-  return { voices, speak, stop };
+  // Kokoro loaded ahead (its model takes seconds to start): one tiny line, so the first real one is quick
+  function warm(options) {
+    const settings = speechSettings(options);
+    if (settings.provider !== 'kokoro' || warmed) return;
+    warmed = true;
+    kokoro('hi', KOKORO_VOICES.some((v) => v.id === settings.voice) ? settings.voice : 'af_heart', 1, AbortSignal.timeout(180000), kokoroDir()).catch(() => { warmed = false; });
+  }
+  return { voices, speak, stop, warm };
 }
 module.exports = { createSpeech, parseSayVoices, KOKORO_VOICES, PROVIDERS, speechSettings, DEFAULT_SPEECH, CLOUD_VOICES, EDGE_VOICES };

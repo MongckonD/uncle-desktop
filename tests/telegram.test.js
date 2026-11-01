@@ -30,3 +30,16 @@ test('telegram: only the paired chat is heard; pairing with the code; message ki
   await tg.handle({ message: { chat: { id: 7 }, text: 'แอบสั่ง' } });
   assert.deepEqual(got.map((m) => [m.kind, m.text || m.fileId]), [['text', 'พรุ่งนี้มีนัดไหม'], ['voice', 'v1'], ['photo', 'big']]);
 });
+
+test('telegram: a document comes as a file, an image document as a photo; edit and the / menu call the API', async () => {
+  const got = [], calls = [];
+  const fetcher = async (url, init) => { calls.push([url.split('/').pop(), JSON.parse(init.body || '{}')]); return { ok: true, json: async () => ({ ok: true, result: {} }) }; };
+  const tg = createTelegram({ getToken: () => 'T', getChat: () => 9, setChat: () => {}, onMessage: (m) => got.push(m), fetcher });
+  await tg.handle({ message: { chat: { id: 9 }, document: { file_id: 'd1', file_name: 'a.csv', mime_type: 'text/csv', file_size: 12 }, caption: 'สรุป' } });
+  await tg.handle({ message: { chat: { id: 9 }, document: { file_id: 'd2', mime_type: 'image/png' } } });
+  assert.deepEqual(got.map((m) => [m.kind, m.fileId, m.name]), [['file', 'd1', 'a.csv'], ['photo', 'd2', undefined]]);
+  await tg.edit(9, 5, 'new text', [[{ text: 'ok', data: 'x' }]]);
+  await tg.setCommands([{ command: 'status', description: 'ดูสถานะ' }]);
+  assert.deepEqual(calls.map((c) => c[0]), ['editMessageText', 'setMyCommands']);
+  assert.equal(calls[0][1].message_id, 5);
+});

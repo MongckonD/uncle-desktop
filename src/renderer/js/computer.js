@@ -53,6 +53,7 @@ export class Computer {
   update(state){this.state=state;this.onState?.(state);this.status.textContent=state.message;this.log.replaceChildren(...state.steps.map(s=>el('li',`${s.status==='done'?'✓':'…'} ${s.label}`)));const active=['running','confirm'].includes(state.status);this.start.disabled=active;this.indicator.hidden=!active;this.indicator.textContent=`■ หยุดงาน · ${state.message}`;this.confirm.hidden=state.status!=='confirm';
     this.reply.hidden=!state.answerNeeded;
     if(state.status==='confirm'){if(!this.onQuestion?.(state)){this.root.hidden=false;this.onVisibility(true);(state.answerNeeded?this.reply:this.confirm.querySelector('button')).focus();}}
-    else if(!active&&!state.remote){this.root.hidden=false;this.onVisibility(true);}
+    // the result in the dialog, except a job you stopped or one started by voice (it says how it went)
+    else if(!active&&state.status!=='stopped'&&!state.voice&&!state.remote){this.root.hidden=false;this.onVisibility(true);}
   }
 }

@@ -7,7 +7,7 @@ test('Thai words read the way they sound', () => {
   const cases = {
     มาก: 'maːk', อากาศ: 'ʔaːˈkaːt', เลย: 'lɤːj', ช่วย: 'ʧʰuːaj', เรื่อง: 'rɯːaŋ', เดียว: 'diːaw', ไหม: 'maj', ไทย: 'tʰaj',
     ปลา: 'plaː', ความ: 'kʰwaːm', คน: 'kʰon', เป็น: 'pen', เกาะ: 'kɔʔ', จริง: 'ʧiŋ', อยาก: 'jaːk', ศูนย์: 'suːn', นะ: 'naʔ',
-    สวัสดี: 'sawatdiː', ธรรมชาติ: 'tʰamˈʧʰaːt', ทราบ: 'saːp', ตำรวจ: 'tamˈruːat', เมษายน: 'meːsaːˈjon', อังกฤษ: 'ʔaŋˈkrɯt',
+    ก็ได้: 'kɔˈdaj', สวัสดี: 'sawatdiː', ธรรมชาติ: 'tʰamˈʧʰaːt', ทราบ: 'saːp', ตำรวจ: 'tamˈruːat', เมษายน: 'meːsaːˈjon', อังกฤษ: 'ʔaŋˈkrɯt',
   };
   for (const [word, ph] of Object.entries(cases)) assert.strictEqual(wordPhonemes(word), ph, word);
 });

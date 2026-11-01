@@ -16,6 +16,7 @@ function createJobs({ now = () => new Date(), log = () => {} } = {}) {
   const value = (v) => (typeof v === 'function' ? v() : v);
   const day = (d) => d.toISOString().slice(0, 10);
   function due(job, t) {
+    if (job.retryAt && t < job.retryAt) return false;
     const at = value(job.at), every = value(job.every);
     if (every) return !job.last || t - job.last >= every * 60000;
     if (!/^\d{1,2}:\d{2}$/.test(at || '')) return false;
@@ -26,8 +27,10 @@ function createJobs({ now = () => new Date(), log = () => {} } = {}) {
   }
 
   async function runJob(id, job, t) {
+    const before = job.last;
     job.running = true; job.last = t;
-    try { await job.run(); } catch (err) { log(`[job ${id}] ${err.message}`); } finally { job.running = false; }
+    // failed (no network yet, AI down): not done, tried again in 10 minutes
+    try { await job.run(); } catch (err) { log(`[job ${id}] ${err.message}`); job.last = before; job.retryAt = +t + 10 * 60000; } finally { job.running = false; }
   }
   // every due, enabled job, now
   function tick() {

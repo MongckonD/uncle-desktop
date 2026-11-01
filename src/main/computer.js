@@ -115,7 +115,7 @@ function createComputer({native,decide,openApp,openSite,picture,system,verifyVis
   async function approve(current,question,answerNeeded=false) {
     if(current.controller.signal.aborted||job!==current)throw new Error('หยุดแล้ว');
     const approvalId=randomUUID();current.state.approvalId=approvalId;
-    const response=new Promise(resolve=>{current.resolveApproval=resolve;current.timer=setTimeout(()=>resolve(false),60000);});
+    const response=new Promise(resolve=>{current.resolveApproval=resolve;current.timer=setTimeout(()=>resolve(false),current.remote?300000:60000);});
     emit(current,{status:'confirm',question,answerNeeded,message:question});
     const yes=await response;clearTimeout(current.timer);current.resolveApproval=null;
     if(job!==current||!yes||current.controller.signal.aborted)throw new Error('ยกเลิกการยืนยัน');
@@ -190,9 +190,9 @@ function createComputer({native,decide,openApp,openSite,picture,system,verifyVis
     }catch(e){if(job===current&&!signal.aborted)emit(current,{status:'error',message:e.message});}
     finally{clearTimeout(current.deadline);clearTimeout(current.timer);if(job===current){native.stop();job=null;}}
   }
-  function start({task,consent,images=false,voice=false,directAction=null,firstAction=null,readOnly=false,security='guarded',switches=null}){
+  function start({task,consent,images=false,voice=false,directAction=null,firstAction=null,readOnly=false,security='guarded',switches=null,remote=false}){
     if(job)throw new Error('มีงานกำลังทำอยู่');if(typeof task!=='string'||!task.trim()||task.length>2000||consent!==true||typeof images!=='boolean'||typeof voice!=='boolean'||!SECURITY.includes(security))throw new Error('ระบุงานและอนุญาตอ่านหน้าจอก่อนเริ่ม');
-    const current={task:task.trim(),inbox:[],images,readOnly:readOnly||security==='lockdown',security,switches:switches||LEVELS[security],directAction:directAction?actionFrom(JSON.stringify(directAction)):null,firstAction:firstAction?actionFrom(JSON.stringify(firstAction)):null,controller:new AbortController(),state:{id:randomUUID(),voice,status:'running',steps:[],message:'เริ่มงาน…'}};job=current;current.deadline=setTimeout(()=>{if(job===current)stop();},600000);emit(current,{});run(current);return current.state.id;
+    const current={remote,task:task.trim(),inbox:[],images,readOnly:readOnly||security==='lockdown',security,switches:switches||LEVELS[security],directAction:directAction?actionFrom(JSON.stringify(directAction)):null,firstAction:firstAction?actionFrom(JSON.stringify(firstAction)):null,controller:new AbortController(),state:{id:randomUUID(),voice,status:'running',steps:[],message:'เริ่มงาน…'}};job=current;current.deadline=setTimeout(()=>{if(job===current)stop();},600000);emit(current,{});run(current);return current.state.id;
   }
   // something you say while she works: she says got it and takes it into her next step
   function tell(text){if(typeof text!=='string'||!text.trim()||text.length>1000)throw new Error('ข้อความไม่ถูกต้อง');if(!job)return false;job.inbox.push(text.trim());emit(job,{message:'รับทราบ: '+text.trim()});return true;}

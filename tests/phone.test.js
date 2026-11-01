@@ -67,8 +67,8 @@ test('phone voice jobs respect disabled control, cancellation, attempt limit, ex
 });
 
 test('phone: text, voice (heard, then answered aloud), photo with its caption', async () => {
-  const tg = fakeTelegram(); const asked = [];
-  const phone = createPhone({ telegram: tg, settings: () => ({ switches: on, voiceReply: 'voice', chatId: 1 }),
+  const tg = fakeTelegram(); const asked = [], onPc = [];
+  const phone = createPhone({ telegram: tg, settings: () => ({ switches: on, voiceReply: 'voice', chatId: 1 }), onReply: (q, a) => onPc.push(q),
     answer: async ({ text, images }) => { asked.push([text, images.length]); return `ตอบ: ${text}`; },
     transcribe: async () => 'พรุ่งนี้มีนัดไหม', speak: async () => ({ bytes: Buffer.from('a'), ext: 'mp3', mime: 'audio/mpeg' }), media: async () => 'd2F2' });
   await phone.onMessage({ kind: 'text', text: 'สวัสดี', chatId: 1 });
@@ -78,6 +78,7 @@ test('phone: text, voice (heard, then answered aloud), photo with its caption', 
   assert.ok(tg.out.some((o) => o.text === '🎙 ได้ยินว่า: พรุ่งนี้มีนัดไหม'));
   assert.equal(tg.out.filter((o) => o.file === 'audio').length, 1); // only the voice message got a voice reply
   assert.equal(phone.history.length, 6);
+  assert.deepEqual(onPc, ['สวัสดี', 'พรุ่งนี้มีนัดไหม', 'อ่านใบเสร็จ']); // each answer offered to the computer too
 });
 
 test('phone: approvals with buttons; off when approving from the phone is off', async () => {
@@ -121,4 +122,78 @@ test('phone: the computer from your phone only with its switch on and the PIN; m
   assert.deepEqual(tg.out.at(-1).buttons[1].map((b) => b.data), ['m:s:18c2abcdef', 'm:r:18c2abcdef', 'm:t:18c2abcdef']);
   await phone.onMessage({ kind: 'callback', data: 'm:s:18c2abcdef', chatId: 1 });
   assert.match(asked.at(-1), /สรุปเมล id 18c2abcdef/);
+});
+
+test('phone: a computer job from the phone asks, steps and ends on the phone; /tell, /pcstop, /pc by voice', async () => {
+  const tg = fakeTelegram(), calls = [];
+  const s = { switches: { ...on, control: true, screen: true }, chatId: 1, pcAsk: true, pcSteps: true, pcShot: true };
+  const remote = { pc: async (t) => { calls.push(['pc', t]); return 'เริ่มแล้ว'; }, answer: (v) => { calls.push(['answer', v.yes, v.text, v.approvalId]); return true; },
+    tell: (t) => { calls.push(['tell', t]); return true; }, stop: () => { calls.push(['stop']); return true; }, screen: async () => Buffer.from('png') };
+  const phone = createPhone({ telegram: tg, settings: () => s, remote, checkPin: (p) => p === '1234', answer: async () => '', transcribe: async () => 'เปิดเพลง', speak: async () => null, media: async () => 'd2F2' });
+  await phone.onMessage({ kind: 'text', text: '/pc 1234 เปิด Spotify', chatId: 1 });
+  await phone.pcState({ id: 'j', status: 'confirm', approvalId: 'a1', question: 'กดเล่นไหม', steps: [{ label: 'เปิด Spotify' }] });
+  assert.ok(tg.out.some((o) => o.text === '🔧 เปิด Spotify') && tg.out.some((o) => o.text === '🖥 กดเล่นไหม'));
+  await phone.onMessage({ kind: 'callback', data: 'pc:yes', chatId: 1 });
+  await phone.pcState({ id: 'j', status: 'confirm', approvalId: 'a2', question: 'เพลงไหน', answerNeeded: true, steps: [{ label: 'เปิด Spotify' }] });
+  await phone.onMessage({ kind: 'text', text: 'เพลงชิล', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/tell เบาเสียงด้วย', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/pcstop', chatId: 1 });
+  await phone.pcState({ id: 'j', status: 'done', message: 'เล่นแล้ว', steps: [] });
+  await phone.onMessage({ kind: 'text', text: '/pc 1234', chatId: 1 });
+  await phone.onMessage({ kind: 'voice', fileId: 'v', mime: 'audio/ogg', chatId: 1 });
+  assert.deepEqual(calls, [['pc', 'เปิด Spotify'], ['answer', true, '', 'a1'], ['answer', true, 'เพลงชิล', 'a2'], ['tell', 'เบาเสียงด้วย'], ['stop'], ['pc', 'เปิดเพลง']]);
+  assert.ok(tg.out.some((o) => o.text === '✅ งานบนคอม: เล่นแล้ว') && tg.out.some((o) => o.file === 'photo'));
+});
+
+test('phone: /hide and /show put her out of sight on the computer and back', async () => {
+  const tg = fakeTelegram(), ghost = [];
+  const phone = createPhone({ telegram: tg, settings: () => ({ switches: on, chatId: 1 }), setGhost: (v) => ghost.push(v), answer: async () => '', transcribe: async () => '', speak: async () => null, media: async () => '' });
+  await phone.onMessage({ kind: 'text', text: '/hide', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/show', chatId: 1 });
+  assert.deepEqual(ghost, [true, false]);
+});
+
+test('phone: /status, /say and /music (behind the computer switch), text files read out, PDFs refused', async () => {
+  const tg = fakeTelegram(), did = [], asked = [];
+  let sw = { ...on, control: false };
+  const phone = createPhone({ telegram: tg, settings: () => ({ switches: sw, chatId: 1 }), status: async () => '🖥 คอมเปิดอยู่', player: async (a) => did.push(a), say: (t) => did.push(`say:${t}`),
+    answer: async ({ text }) => { asked.push(text); return 'ok'; }, transcribe: async () => '', speak: async () => null, media: async () => '' });
+  tg.download = async () => Buffer.from('name,qty\negg,2\n');
+  await phone.onMessage({ kind: 'text', text: '/status', chatId: 1 });
+  assert.equal(tg.out.at(-1).text, '🖥 คอมเปิดอยู่');
+  await phone.onMessage({ kind: 'text', text: '/say สวัสดี', chatId: 1 });
+  assert.match(tg.out.at(-1).text, /ปิดอยู่/); assert.deepEqual(did, []); // switch off: nothing happens
+  sw = { ...on, control: true };
+  await phone.onMessage({ kind: 'text', text: '/say สวัสดี', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/music prev', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/music dance', chatId: 1 });
+  assert.deepEqual(did, ['say:สวัสดี', 'previous']);
+  assert.match(tg.out.at(-1).text, /ใช้แบบนี้: \/music/);
+  await phone.onMessage({ kind: 'file', fileId: 'f', name: 'orders.csv', mime: 'text/csv', size: 20, chatId: 1, caption: 'มีกี่แถว' });
+  assert.ok(asked[0].startsWith('มีกี่แถว') && asked[0].includes('--- orders.csv ---') && asked[0].includes('egg,2'));
+  await phone.onMessage({ kind: 'file', fileId: 'p', name: 'bill.pdf', mime: 'application/pdf', size: 20, chatId: 1 });
+  assert.match(tg.out.at(-1).text, /PDF.*ยังไม่รองรับ/);
+  assert.equal(asked.length, 1);
+});
+
+test('phone: a photo sent while an agent session is picked is saved in its project and the session told where', async () => {
+  const tg = fakeTelegram(), told = [], saved = [];
+  const hub = { current: 's1', project: 'shop', say: async (chat, text) => told.push(text), command: async () => false, callback: async () => false, HELP: '' };
+  const phone = createPhone({ telegram: tg, settings: () => ({ switches: on, chatId: 1 }), hub, coding: { saveImage: (p, bytes) => { saved.push([p, bytes.length]); return '.uncle/inbox/1.jpg'; } },
+    answer: async () => '', transcribe: async () => '', speak: async () => null, media: async () => '' });
+  await phone.onMessage({ kind: 'photo', fileId: 'p', chatId: 1, caption: 'ทำให้เหมือนรูปนี้' });
+  assert.deepEqual(saved, [['shop', 5]]);
+  assert.deepEqual(told, ['ทำให้เหมือนรูปนี้\n(ดูรูปที่ .uncle/inbox/1.jpg)']);
+});
+
+test('PIN-armed voice capture remains bound to the sender after merging live Telegram jobs', async () => {
+  const tasks = [], tg = fakeTelegram();
+  const phone = createPhone({ telegram: tg, settings: () => ({ allowedUsers: [11, 22], switches: { ...on, control: true } }),
+    checkPin: p => p === '1234', remote: { pc: async task => { tasks.push(task); return 'ok'; } },
+    transcribe: async () => 'open editor', media: async () => 'd2F2', speak: async () => null, answer: async () => 'chat' });
+  await phone.onMessage({ kind: 'text', chatId: -100, userId: 11, text: '/pc 1234' });
+  await phone.onMessage({ kind: 'voice', chatId: -100, userId: 22, fileId: 'v' });
+  assert.deepEqual(tasks, []);
+  await phone.onMessage({ kind: 'voice', chatId: -100, userId: 11, fileId: 'v' });
+  assert.deepEqual(tasks, ['open editor']);
 });
