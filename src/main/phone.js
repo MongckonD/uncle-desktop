@@ -18,10 +18,12 @@ const HELP = `คุยกับฉันได้เลย:
 /pr PIN เปิด pull request · /undo PIN ย้อน commit ล่าสุด
 
 🖥 คอม (เปิดได้ในตั้งค่า Telegram ต้องใส่ PIN):
-/screen PIN ดูหน้าจอ · /pc PIN งาน สั่งงานคอม · /lock /sleep /shutdown /restart PIN`;
+/screen PIN ดูหน้าจอ · /pc PIN งาน สั่งงานคอม (หรือ /pc PIN แล้วส่งเสียงบอกงาน)
+/tell ข้อความ บอกเพิ่มระหว่างทำ · /pcstop หยุดงานบนคอม · /lock /sleep /shutdown /restart PIN`;
 
 // coding: her Vibecode (vibe.js, plus shot(url)); checkPin(pin) for the risky ones (PR, undo)
-// remote: { screen() -> png, pc(task) -> text, power(action) -> text } for the switches screen, control, power
+// remote: { screen() -> png, pc(task) -> text, answer({ jobId, approvalId, yes, text }), tell(text), stop(), power(action) -> text }
+// for the switches screen, control, power
 function createPhone({ telegram, settings, answer, transcribe, speak, media, coding = null, remote = null, checkPin = () => false, setProject = () => {}, idleSeconds = () => 0, onReply = null, log = () => {} }) {
   let mode = 'chat'; // 'code': what you send goes to the project's coding agent
   const history = []; // the last turns with your phone, for follow-ups
@@ -89,14 +91,52 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
     }
   }
 
+  // a job your phone started on the computer: its questions, steps and end, back to your phone
+  let pcAsk = null, pcSteps = 0, pcLines = [], pcLast = 0, pcArmed = 0;
+  const pcFlush = (chatId) => { if (pcLines.length) { telegram.send(chatId, pcLines.join('\n')).catch(() => {}); pcLines = []; pcLast = Date.now(); } };
+  async function pcState(state) {
+    const s = settings(), chatId = s.chatId;
+    if (!chatId) return undefined;
+    if (s.pcSteps) {
+      for (const step of (state.steps || []).slice(pcSteps)) pcLines.push(`🔧 ${step.label}`);
+      if (pcLines.length >= 5 || Date.now() - pcLast > 8000) pcFlush(chatId);
+    }
+    pcSteps = state.steps?.length || 0;
+    if (state.status === 'confirm') {
+      pcFlush(chatId);
+      if (!s.pcAsk) return undefined; // answered on the computer only
+      pcAsk = state;
+      return state.answerNeeded
+        ? telegram.send(chatId, `❓ ${state.question}\nพิมพ์หรือส่งเสียงตอบได้เลย (5 นาที)`, [[{ text: '✗ ยกเลิกงาน', data: 'pc:no' }]])
+        : telegram.send(chatId, `🖥 ${state.question}`, [[{ text: '✓ อนุญาต', data: 'pc:yes' }, { text: '✗ ไม่ต้อง', data: 'pc:no' }]]);
+    }
+    pcAsk = null;
+    if (!['done', 'error', 'stopped'].includes(state.status)) return undefined;
+    pcFlush(chatId); pcSteps = 0;
+    await telegram.send(chatId, `${state.status === 'done' ? '✅' : '⚠️'} งานบนคอม: ${state.message}${state.evidence ? `\n${state.evidence}` : ''}`);
+    if (s.pcShot && s.switches.screen) await telegram.sendFile(chatId, 'photo', await remote.screen(), 'screen.jpg', 'image/jpeg', 'หน้าจอตอนงานจบ').catch((err) => log(`[phone] shot: ${err.message}`));
+    return undefined;
+  }
+  // your answer to the computer's question (a tap, or what you typed or said)
+  async function pcAnswer(chatId, yes, text = '') {
+    const asked = pcAsk; pcAsk = null;
+    if (!asked) return telegram.send(chatId, 'ไม่มีคำถามจากคอมค้างอยู่');
+    const ok = remote.answer({ jobId: asked.id, approvalId: asked.approvalId, yes, text });
+    return telegram.send(chatId, !ok ? 'คำถามนี้หมดอายุแล้ว' : yes ? 'ส่งให้คอมแล้ว กำลังทำต่อ…' : 'ไม่ทำแล้ว');
+  }
+
   // the computer from your phone: each behind its switch and your PIN ("/screen 1234", "/pc 1234 เปิด Spotify", "/lock 1234")
   async function remoteCommand(chatId, text) {
     const [cmd, pin, ...rest] = text.split(/\s+/), sw = settings().switches;
-    const need = { '/screen': 'screen', '/pc': 'control' }[cmd] || 'power';
+    const need = { '/screen': 'screen', '/pc': 'control', '/pcstop': 'control', '/tell': 'control' }[cmd] || 'power';
     if (!sw[need]) return telegram.send(chatId, `คำสั่งนี้ปิดอยู่ เปิดได้ที่ ตั้งค่า › Telegram บนคอม (${need === 'screen' ? 'ดูหน้าจอ' : need === 'control' ? 'สั่งงานคอม' : 'ปิด/ล็อกเครื่อง'})`);
+    // a job already started with your PIN: stop it, or tell it more
+    if (cmd === '/pcstop') return telegram.send(chatId, remote.stop() ? 'หยุดงานบนคอมแล้ว' : 'ไม่มีงานบนคอมที่สั่งจากมือถือ');
+    if (cmd === '/tell') return telegram.send(chatId, remote.tell(text.slice(5).trim()) ? 'บอกคอมแล้ว' : 'ไม่มีงานบนคอมที่กำลังทำ');
     if (!checkPin(pin || '')) return telegram.send(chatId, `ต้องใส่ PIN เช่น ${cmd} 1234${cmd === '/pc' ? ' เปิด Spotify' : ''}`);
     if (cmd === '/screen') return telegram.sendFile(chatId, 'photo', await remote.screen(), 'screen.jpg', 'image/jpeg', 'หน้าจอตอนนี้');
-    if (cmd === '/pc') return telegram.send(chatId, await remote.pc(rest.join(' ')));
+    if (cmd === '/pc' && !rest.length) { pcArmed = Date.now(); return telegram.send(chatId, '🎙 ส่งข้อความเสียงบอกงานได้เลย (ภายใน 2 นาที)'); }
+    if (cmd === '/pc') { pcSteps = 0; return telegram.send(chatId, await remote.pc(rest.join(' '))); }
     return telegram.send(chatId, await remote.power(cmd.slice(1)));
   }
 
@@ -104,6 +144,7 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
     const { chatId } = m;
     try {
       if (m.kind === 'callback') {
+        if (remote && /^pc:(yes|no)$/.test(m.data || '')) return await pcAnswer(chatId, m.data === 'pc:yes');
         const [, id, yes] = /^ask:(\w+):(yes|no)$/.exec(m.data) || [];
         const resolve = asks.get(id);
         if (resolve) { asks.delete(id); resolve(yes === 'yes'); await telegram.send(chatId, yes === 'yes' ? 'อนุญาตแล้ว กำลังทำ…' : 'ไม่ทำนะ'); }
@@ -117,7 +158,8 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
       if (m.kind === 'text') {
         if (/^\/(start|help)\b/.test(m.text)) return telegram.send(chatId, HELP);
         if (/^\/new\b/.test(m.text)) { history.length = 0; return telegram.send(chatId, 'เริ่มเรื่องใหม่แล้ว'); }
-        if (remote && /^\/(screen|pc|lock|sleep|shutdown|restart)\b/.test(m.text)) return await remoteCommand(chatId, m.text);
+        if (remote && /^\/(screen|pc|pcstop|tell|lock|sleep|shutdown|restart)\b/.test(m.text)) return await remoteCommand(chatId, m.text);
+        if (remote && pcAsk?.answerNeeded && !m.text.startsWith('/')) return await pcAnswer(chatId, true, m.text);
         if (coding && m.text.startsWith('/') && (await codeCommand(chatId, m.text)) !== false) return undefined;
         if (coding && mode === 'code') return await code(chatId, m.text);
         return await reply(chatId, m.text);
@@ -128,6 +170,8 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
         const heard = (await transcribe(Buffer.from(wav, 'base64'))).trim();
         if (!heard) return telegram.send(chatId, 'ไม่ได้ยินอะไรเลย ลองอัดใหม่อีกทีนะ');
         await telegram.send(chatId, `🎙 ได้ยินว่า: ${heard}`);
+        if (remote && pcAsk?.answerNeeded) return await pcAnswer(chatId, true, heard);
+        if (remote && settings().switches.control && Date.now() - pcArmed < 120000) { pcArmed = 0; pcSteps = 0; return telegram.send(chatId, await remote.pc(heard)); }
         if (coding && mode === 'code') return await code(chatId, heard);
         return await reply(chatId, heard, { heardVoice: true });
       }
@@ -169,7 +213,7 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
     await telegram.send(chatId, alert.kind === 'event' && alert.prep ? `${text}\n\n${alert.prep}` : text, buttons.length ? buttons : undefined);
   }
 
-  return { onMessage, notify, confirm, history, get mode() { return mode; } };
+  return { onMessage, notify, confirm, pcState, history, get mode() { return mode; } };
 }
 
 module.exports = { createPhone, HELP };

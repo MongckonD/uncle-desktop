@@ -62,7 +62,7 @@ let telegram = null, phone = null; // your phone, through her Telegram bot
 let remote = null, remoteJob = null; // the computer from your phone (screen, a job, power), and the job it started
 // her Telegram settings, with what's off by default
 const PHONE_SWITCHES = { chat: true, approve: true, screen: false, control: false, power: false };
-const phoneSettings = () => { const t = config.load().telegram || {}; return { chatId: t.chatId || null, notify: t.notify || 'always', voiceReply: t.voiceReply || 'voice', pcVoice: t.pcVoice === true, switches: { ...PHONE_SWITCHES, ...t.switches }, pin: t.pin || '' }; };
+const phoneSettings = () => { const t = config.load().telegram || {}; return { chatId: t.chatId || null, notify: t.notify || 'always', voiceReply: t.voiceReply || 'voice', pcVoice: t.pcVoice === true, pcAsk: t.pcAsk !== false, pcSteps: t.pcSteps !== false, pcShot: t.pcShot !== false, switches: { ...PHONE_SWITCHES, ...t.switches }, pin: t.pin || '' }; };
 const savePhone = (patch) => updateConfig({ telegram: { ...config.load().telegram, ...patch } });
 // a job for her page (renderer), answered later: decoding audio and video with Chromium
 const rendererCalls = new Map();
@@ -842,6 +842,11 @@ function rebuildTray() {
         sw('approve', th ? 'อนุมัติงานจากมือถือ (ส่งเมล สร้างนัด…)' : 'Approve from your phone (send mail, events…)'),
         sw('screen', th ? 'ส่งภาพหน้าจอคอมเมื่อขอ (/screen PIN)' : 'Send a screenshot when asked (/screen PIN)'),
         sw('control', th ? 'สั่งงานคอมจากมือถือ (/pc PIN งาน)' : 'Computer jobs from your phone (/pc PIN task)'),
+        ...(s.switches.control ? [
+          { label: th ? '   ↳ ถามอนุมัติและคำถามของ AI ในมือถือ' : '   ↳ Approvals and questions on your phone', type: 'checkbox', checked: s.pcAsk, click: (item) => savePhone({ pcAsk: item.checked }) },
+          { label: th ? '   ↳ ส่งความคืบหน้าทีละขั้น' : '   ↳ Send each step', type: 'checkbox', checked: s.pcSteps, click: (item) => savePhone({ pcSteps: item.checked }) },
+          { label: th ? '   ↳ ส่งภาพหน้าจอเมื่องานจบ (ต้องเปิดส่งภาพหน้าจอ)' : '   ↳ Screenshot when done (needs screenshots on)', type: 'checkbox', checked: s.pcShot, click: (item) => savePhone({ pcShot: item.checked }) },
+        ] : []),
         sw('power', th ? 'ล็อก พัก ปิดเครื่องจากมือถือ (/lock PIN)' : 'Lock, sleep, shut down from your phone (/lock PIN)'),
         { type: 'separator' },
         { label: s.pin ? (th ? 'เปลี่ยน PIN…' : 'Change PIN…') : (th ? 'ตั้ง PIN (สำหรับคำสั่งเสี่ยงจากมือถือ)…' : 'Set a PIN (for risky commands)…'), click: () => sendCommand('telegram-pin') },
@@ -1272,8 +1277,7 @@ function registerIpc() {
     notify: state => {
       overlay?.webContents.send('computer:state', state);
       // a job your phone started: its end goes back to your phone
-      if (state.id === remoteJob && ['done', 'error', 'stopped'].includes(state.status)) { remoteJob = null; phone?.notify({ kind: 'agent', message: `${state.status === 'done' ? '✅' : '⚠️'} งานบนคอม: ${state.message}${state.evidence ? `
-${state.evidence}` : ''}` }); }
+      if (state.id === remoteJob) { if (['done', 'error', 'stopped'].includes(state.status)) remoteJob = null; phone?.pcState(state); }
     },
     // her cursor: screen pixels (Windows) or points (Mac) into the overlay's own coordinates
     onPoint: (at) => { if (!overlay) return; const p = process.platform === 'win32' ? screen.screenToDipPoint(at) : at, b = overlay.getBounds(); sendCommand('computer-cursor', { x: p.x - b.x, y: p.y - b.y }); },
@@ -1311,10 +1315,13 @@ ${state.evidence}` : ''}` }); }
       if (!o.consent) return 'ยังไม่ได้อนุญาตควบคุมเครื่องบนคอม (หน้าควบคุมเครื่อง)';
       computerConfig = llmConfig(); computerModel = modelFor('computer', computerConfig);
       if (!computerModel) return 'ยังไม่ได้ตั้งค่า AI บนคอม';
-      remoteJob = computer.start({ task, consent: true, images: o.images, security: o.security, switches: o.switches });
+      remoteJob = computer.start({ task, consent: true, images: o.images, security: o.security, switches: o.switches, remote: true });
       notifyUser({ kind: 'info', message: `📱 งานจาก Telegram: ${task}` });
       return `เริ่มงานบนคอมแล้ว: ${task} — เสร็จแล้วจะบอก`;
     },
+    answer: (value) => computer.answer(value),
+    tell: (text) => (remoteJob ? computer.tell(text) : false),
+    stop: () => { if (!remoteJob) return false; computer.stop(); return true; },
     power: async (action) => { const a = { lock: 'lock', sleep: 'sleep', shutdown: 'shutdown', restart: 'restart' }[action]; return String(await systemTools({ tool: 'power', action: a }, { app: { window: 0 } }, AbortSignal.timeout(20000))); },
   };
   const computerOptions=()=>{const saved=config.load().computerControl||{};return {consent:saved.consent===true&&saved.provider===config.load().provider,voice:saved.voice===true,images:saved.images===true,security:SECURITY.includes(saved.security)?saved.security:'guarded',switches:validSwitches(saved.switches)||LEVELS[SECURITY.includes(saved.security)?saved.security:'guarded']};};

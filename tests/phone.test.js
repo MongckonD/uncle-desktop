@@ -65,3 +65,24 @@ test('phone: the computer from your phone only with its switch on and the PIN; m
   await phone.onMessage({ kind: 'callback', data: 'm:s:18c2abcdef', chatId: 1 });
   assert.match(asked.at(-1), /สรุปเมล id 18c2abcdef/);
 });
+
+test('phone: a computer job from the phone asks, steps and ends on the phone; /tell, /pcstop, /pc by voice', async () => {
+  const tg = fakeTelegram(), calls = [];
+  const s = { switches: { ...on, control: true, screen: true }, chatId: 1, pcAsk: true, pcSteps: true, pcShot: true };
+  const remote = { pc: async (t) => { calls.push(['pc', t]); return 'เริ่มแล้ว'; }, answer: (v) => { calls.push(['answer', v.yes, v.text, v.approvalId]); return true; },
+    tell: (t) => { calls.push(['tell', t]); return true; }, stop: () => { calls.push(['stop']); return true; }, screen: async () => Buffer.from('png') };
+  const phone = createPhone({ telegram: tg, settings: () => s, remote, checkPin: (p) => p === '1234', answer: async () => '', transcribe: async () => 'เปิดเพลง', speak: async () => null, media: async () => 'd2F2' });
+  await phone.onMessage({ kind: 'text', text: '/pc 1234 เปิด Spotify', chatId: 1 });
+  await phone.pcState({ id: 'j', status: 'confirm', approvalId: 'a1', question: 'กดเล่นไหม', steps: [{ label: 'เปิด Spotify' }] });
+  assert.ok(tg.out.some((o) => o.text === '🔧 เปิด Spotify') && tg.out.some((o) => o.text === '🖥 กดเล่นไหม'));
+  await phone.onMessage({ kind: 'callback', data: 'pc:yes', chatId: 1 });
+  await phone.pcState({ id: 'j', status: 'confirm', approvalId: 'a2', question: 'เพลงไหน', answerNeeded: true, steps: [{ label: 'เปิด Spotify' }] });
+  await phone.onMessage({ kind: 'text', text: 'เพลงชิล', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/tell เบาเสียงด้วย', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/pcstop', chatId: 1 });
+  await phone.pcState({ id: 'j', status: 'done', message: 'เล่นแล้ว', steps: [] });
+  await phone.onMessage({ kind: 'text', text: '/pc 1234', chatId: 1 });
+  await phone.onMessage({ kind: 'voice', fileId: 'v', mime: 'audio/ogg', chatId: 1 });
+  assert.deepEqual(calls, [['pc', 'เปิด Spotify'], ['answer', true, '', 'a1'], ['answer', true, 'เพลงชิล', 'a2'], ['tell', 'เบาเสียงด้วย'], ['stop'], ['pc', 'เปิดเพลง']]);
+  assert.ok(tg.out.some((o) => o.text === '✅ งานบนคอม: เล่นแล้ว') && tg.out.some((o) => o.file === 'photo'));
+});
