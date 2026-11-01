@@ -812,6 +812,7 @@ export class Chat {
     if (id !== this.turn) return;
     this.answer += piece;
     this.panel.stream(clean(this.answer));
+    this.onStream?.(id, this.answer); // the voice can start on the first sentence
     this.voice.play('blip'); // her blips as the words come in
   }
 

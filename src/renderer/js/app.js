@@ -435,6 +435,7 @@ async function boot() {
   const tellJob = (text) => ['running'].includes(computerUI.state?.status) ? host.computerTell(text).catch(() => false) : false;
   chat.onJobTell = tellJob;
   listeningUI.onJobControl=async text=>{if(/^(?:หยุด(?:งาน|ทำงาน)?|ยกเลิก(?:งาน)?|stop|cancel)[.!\s]*$/i.test(text)){host.computerStop();speechUI.stop();}else if(await tellJob(text))listeningUI.setStatus('รับทราบ: '+text);else listeningUI.setStatus('กำลังทำงานอยู่ — พูดหยุดงานเพื่อยกเลิก');};
+  chat.onStream = (id, text) => { if (!listeningUI.submitting) speechUI.feed(id, text); };
   chat.onReply = (text) => { if (capri.ghost && ghostCfg.ghostShow === 'peek') peekOut(); if (listeningUI.submitting) listeningUI.speakFeedback(text); else speechUI.reply(text); };
   chat.onSpeechStop = () => { speechUI.stop(); listeningUI.stop(); };
   brain.onTalk = () => chat.start();

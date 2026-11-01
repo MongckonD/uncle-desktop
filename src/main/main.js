@@ -1437,6 +1437,7 @@ function registerIpc() {
       patch.apiKeys = { ...config.load().apiKeys, [slot]: `enc:${safeStorage.encryptString(key.trim()).toString('base64')}` };
     }
     updateConfig(patch);
+    speech.warm(patch.speech); // Kokoro picked: loaded now, not at the first sentence
     return patch.speech;
   });
   // the key of the voice service in use (ElevenLabs shares the voice agent's)
@@ -1927,6 +1928,7 @@ function main() {
     serveProtocol();
     registerIpc();
     createOverlay();
+    speech.warm(config.load().speech); // Kokoro, if it's her voice: loaded at the start
     createTray();
     windowWatch = startWindowWatch({
       overlay,
