@@ -117,3 +117,13 @@ test('phone: /status, /say and /music (behind the computer switch), text files r
   assert.match(tg.out.at(-1).text, /PDF.*ยังไม่รองรับ/);
   assert.equal(asked.length, 1);
 });
+
+test('phone: a photo sent while an agent session is picked is saved in its project and the session told where', async () => {
+  const tg = fakeTelegram(), told = [], saved = [];
+  const hub = { current: 's1', project: 'shop', say: async (chat, text) => told.push(text), command: async () => false, callback: async () => false, HELP: '' };
+  const phone = createPhone({ telegram: tg, settings: () => ({ switches: on, chatId: 1 }), hub, coding: { saveImage: (p, bytes) => { saved.push([p, bytes.length]); return '.uncle/inbox/1.jpg'; } },
+    answer: async () => '', transcribe: async () => '', speak: async () => null, media: async () => '' });
+  await phone.onMessage({ kind: 'photo', fileId: 'p', chatId: 1, caption: 'ทำให้เหมือนรูปนี้' });
+  assert.deepEqual(saved, [['shop', 5]]);
+  assert.deepEqual(told, ['ทำให้เหมือนรูปนี้\n(ดูรูปที่ .uncle/inbox/1.jpg)']);
+});
