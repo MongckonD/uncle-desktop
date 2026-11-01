@@ -13,8 +13,8 @@ const HELP = `คุยกับฉันได้เลย:
 
 💻 Vibecode (สั่ง Claude Code / Codex บนคอม):
 /projects รายชื่อโปรเจกต์ · /create ชื่อ [codex] สร้างใหม่ · /project ชื่อ เลือก
-/code โหมดเขียนโค้ด (ข้อความ เสียง รูป ส่งให้ Agent) · /chat กลับมาคุยปกติ
-/diff ดูสิ่งที่แก้ · /commit ข้อความ · /stop หยุด · /shot url ดูหน้าเว็บ
+/code เปิด session สดของโปรเจกต์ที่เลือก (ข้อความ เสียง รูป ส่งให้ Agent) · /chat กลับมาคุยปกติ
+/diff ดูสิ่งที่แก้ · /commit ข้อความ · /interrupt หยุด · /shot url ดูหน้าเว็บ
 /pr PIN เปิด pull request · /undo PIN ย้อน commit ล่าสุด
 
 🖥 คอม (เปิดได้ในตั้งค่า Telegram ต้องใส่ PIN):
@@ -25,7 +25,6 @@ const HELP = `คุยกับฉันได้เลย:
 // remote: { screen() -> png, pc(task) -> text, answer({ jobId, approvalId, yes, text }), tell(text), stop(), power(action) -> text }
 // for the switches screen, control, power
 function createPhone({ telegram, settings, answer, transcribe, speak, media, coding = null, remote = null, checkPin = () => false, setProject = () => {}, setGhost = () => {}, hub = null, idleSeconds = () => 0, onReply = null, log = () => {} }) {
-  let mode = 'chat'; // 'code': what you send goes to the project's coding agent
   const history = []; // the last turns with your phone, for follow-ups
   const asks = new Map(); // a tool waiting for your tap: id -> resolve
   const remember = (role, content) => { history.push({ role, content }); while (history.length > 12) history.shift(); };
@@ -58,17 +57,6 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
     }
   }
 
-  // a prompt to the project's agent, its steps sent as they come (a few lines at a time)
-  async function code(chatId, prompt) {
-    const project = settings().project;
-    if (!project) return telegram.send(chatId, 'ยังไม่ได้เลือกโปรเจกต์ · /projects ดูรายชื่อ หรือ /create ชื่อ สร้างใหม่');
-    await telegram.send(chatId, `💻 ${project}: รับงานแล้ว กำลังทำ…`);
-    let lines = [], last = Date.now();
-    const flush = () => { if (lines.length) { telegram.send(chatId, lines.join('\n')).catch(() => {}); lines = []; last = Date.now(); } };
-    const answerText = await coding.send(project, prompt, (line) => { lines.push(line); if (lines.length >= 5 || Date.now() - last > 8000) flush(); });
-    flush();
-    await telegram.send(chatId, `✅ ${project}\n${answerText}`.slice(0, 4000), [[{ text: 'ดูสิ่งที่แก้', data: 'code:diff' }, { text: 'commit', data: 'code:commit' }]]);
-  }
   // the Vibecode commands; true when the text was one
   async function codeCommand(chatId, text) {
     const [cmd, ...rest] = text.split(/\s+/), arg = rest.join(' ');
@@ -76,12 +64,10 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
     const need = () => { if (!project) throw new Error('ยังไม่ได้เลือกโปรเจกต์ · /project ชื่อ'); return project; };
     const pinned = async (run) => (checkPin(rest.at(-1) || '') ? run() : telegram.send(chatId, 'คำสั่งนี้ต้องใส่ PIN ต่อท้าย เช่น /pr 1234 (ตั้ง PIN ได้ในแท็บ Telegram บนคอม)'));
     switch (cmd) {
-      case '/projects': { const list = coding.projects(); return telegram.send(chatId, list.length ? list.map((p) => `${p === project ? '▶' : '•'} ${p}${coding.busy(p) ? ' (กำลังทำงาน)' : ''}`).join('\n') : 'ยังไม่มีโปรเจกต์ · /create ชื่อ'); }
-      case '/create': { const [name, agent] = rest; await coding.create(name, agent); setProject(name); if (hub) return hub.open(chatId, name, agent === 'codex' ? 'codex' : 'claude'); mode = 'code'; return telegram.send(chatId, `สร้าง ${name} แล้ว (${agent === 'codex' ? 'Codex' : 'Claude Code'}) · อยู่ในโหมดเขียนโค้ด บอกได้เลยว่าจะทำอะไร`); }
+      case '/projects': { const list = coding.projects(); return telegram.send(chatId, list.length ? list.map((p) => `${p === project ? '▶' : '•'} ${p}${hub?.busy(p) ? ' (กำลังทำงาน)' : ''}`).join('\n') : 'ยังไม่มีโปรเจกต์ · /create ชื่อ'); }
+      case '/create': { const [name, agent] = rest; await coding.create(name, agent); setProject(name); return hub.open(chatId, name, agent === 'codex' ? 'codex' : 'claude'); }
       case '/project': { if (!coding.projects().includes(arg)) return telegram.send(chatId, `ไม่มีโปรเจกต์ ${arg}`); setProject(arg); return telegram.send(chatId, `เลือก ${arg} แล้ว · /code เพื่อสั่งงาน`); }
-      case '/code': if (hub && project) return hub.open(chatId, project); mode = 'code'; return telegram.send(chatId, `💻 โหมดเขียนโค้ด${project ? `: ${project}` : ''} · ข้อความ เสียง และรูปจะส่งให้ Agent · /chat เพื่อกลับ`);
-      case '/chat': mode = 'chat'; return telegram.send(chatId, 'กลับมาคุยปกติแล้ว');
-      case '/stop': return telegram.send(chatId, coding.stop(need()) ? 'หยุดแล้ว' : 'ไม่มีงานที่กำลังทำ');
+      case '/code': return project ? hub.open(chatId, project) : telegram.send(chatId, 'ยังไม่ได้เลือกโปรเจกต์ · /projects ดูรายชื่อ หรือ /create ชื่อ');
       case '/diff': { const d = await coding.diff(need()); await telegram.send(chatId, `📝 ${d.stat}`); if (d.text) await telegram.sendFile(chatId, 'document', Buffer.from(d.text), `${project}.diff`, 'text/plain'); return undefined; }
       case '/commit': return telegram.send(chatId, `✅ ${await coding.commit(need(), arg)}`);
       case '/pr': return pinned(async () => telegram.send(chatId, `🚀 ${await coding.pullRequest(need())}`));
@@ -164,7 +150,6 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
         if (remote && /^\/(screen|pc|pcstop|tell|lock|sleep|shutdown|restart)\b/.test(m.text)) return await remoteCommand(chatId, m.text);
         if (remote && pcAsk?.answerNeeded && !m.text.startsWith('/')) return await pcAnswer(chatId, true, m.text);
         if (coding && m.text.startsWith('/') && (await codeCommand(chatId, m.text)) !== false) return undefined;
-        if (coding && mode === 'code') return await code(chatId, m.text);
         return await reply(chatId, m.text);
       }
       if (m.kind === 'voice') {
@@ -176,13 +161,12 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
         if (remote && pcAsk?.answerNeeded) return await pcAnswer(chatId, true, heard);
         if (remote && settings().switches.control && Date.now() - pcArmed < 120000) { pcArmed = 0; pcSteps = 0; return telegram.send(chatId, await remote.pc(heard)); }
         if (hub?.current && (await hub.command(chatId, heard))) return undefined;
-        if (coding && mode === 'code') return await code(chatId, heard);
         return await reply(chatId, heard, { heardVoice: true });
       }
       if (m.kind === 'photo') {
-        if (coding && mode === 'code') { // a mockup or a screenshot: saved in the project for the agent to look at
-          const file = coding.saveImage(settings().project, await telegram.download(m.fileId));
-          return await code(chatId, `${m.caption || 'ทำให้หน้าตาเหมือนรูปนี้'}\n(ดูรูปที่ ${file})`);
+        if (hub?.current) { // a mockup or a screenshot: saved in the project, the agent told where to look
+          const file = coding.saveImage(hub.project, await telegram.download(m.fileId));
+          return await hub.say(chatId, `${m.caption || 'ทำให้หน้าตาเหมือนรูปนี้'}\n(ดูรูปที่ ${file})`);
         }
         const image = (await telegram.download(m.fileId)).toString('base64');
         return await reply(chatId, m.caption || 'ดูรูปนี้แล้วบอกหน่อยว่าเป็นอะไร มีอะไรน่าสนใจ', { images: [image] });
@@ -217,7 +201,7 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
     await telegram.send(chatId, alert.kind === 'event' && alert.prep ? `${text}\n\n${alert.prep}` : text, buttons.length ? buttons : undefined);
   }
 
-  return { onMessage, notify, confirm, pcState, history, get mode() { return mode; } };
+  return { onMessage, notify, confirm, pcState, history };
 }
 
 module.exports = { createPhone, HELP };

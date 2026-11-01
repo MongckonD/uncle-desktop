@@ -57,7 +57,6 @@ async function callTool(server, name, args, options) {
   throw new Error(`no tool ${name}`);
 }
 const crypto = require('node:crypto');
-const VIBE_TOKEN = crypto.randomBytes(24).toString('hex'); // only her own Vibecode jobs may ask for approvals
 let vibe = null; // Vibecode: projects and their coding agents, run from your phone
 let agents = null, agentPhone = null, agentsWin = null; // her live coding-agent sessions (agents.js), your phone's view of them, and the computer's
 const agentProject = (name) => { const dir = vibe.dirOf(name); if (!fs.existsSync(dir)) throw new Error(`ไม่มีโปรเจกต์ ${name} · /projects ดูรายชื่อ หรือ /create ${name}`); return dir; };
@@ -1037,8 +1036,6 @@ function startPhone() {
     getSettings: () => ({ workspace: config.load().vibe?.workspace || workspace }),
     getState: (name) => config.load().vibe?.projects?.[name],
     saveState: (name, state) => { const v = config.load().vibe || {}; updateConfig({ vibe: { ...v, projects: { ...v.projects, [name]: state } } }); },
-    approveScript: path.join(ROOT, 'hooks', 'uncle-approve-mcp.js').replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`),
-    port: PORT, token: VIBE_TOKEN, log: (line) => console.log(line),
   });
   const coding = { ...vibe, shot: shotPage };
   agents ||= createAgents({ modelFor: (agent) => config.load().vibe?.models?.[agent] || null, onEvent: (e) => { agentPhone?.onEvent(e); if (agentsWin && !agentsWin.isDestroyed()) agentsWin.webContents.send('agents:event', e); }, log: (line) => console.log(line) });
@@ -1096,18 +1093,6 @@ async function shotPage(url) {
     await new Promise((r) => setTimeout(r, 1500));
     return (await win.webContents.capturePage()).toPNG();
   } finally { win.destroy(); }
-}
-// a Vibecode tool that needs permission: your phone, else her bubble; no answer in 10 minutes is no
-function approveForVibe({ tool_name: tool, input = {}, project } = {}, token) {
-  if (token !== VIBE_TOKEN || typeof tool !== 'string') return Promise.resolve(false);
-  const args = typeof input === 'object' && input ? input : {};
-  if (phone && phoneSettings().chatId) return phone.confirm(phoneSettings().chatId, { server: project || 'code', name: tool }, args);
-  return new Promise((resolve) => {
-    const ask = randomUUID();
-    mcpAsks.set(ask, resolve);
-    sendCommand('mcp-confirm', { id: ask, tool: `${project}/${tool}`, detail: JSON.stringify(args).slice(0, 200) });
-    setTimeout(() => { if (mcpAsks.delete(ask)) resolve(false); }, 10 * 60000);
-  });
 }
 async function setTelegramToken(token) {
   token = String(token || '').trim();
@@ -1938,7 +1923,6 @@ function main() {
         if (evt.hook_event_name === 'Stop' && !vibe?.projects().includes(where)) phone?.notify({ kind: 'agent', message: `${where}: ทำงานเสร็จแล้ว` });
       },
       onDebug: DEV ? debugHandler : null,
-      onApprove: approveForVibe,
     });
     const taken = registerHotkeys();
     if (taken.length) console.warn('[uncle] shortcuts taken by another app:', taken.join(', '));

@@ -73,3 +73,15 @@ test('agent phone: Vibecode /code opens the project live session (picked up agai
   assert.equal(agents.calls.length, 1);
   assert.deepEqual(picked, ['shop', 'shop']);
 });
+
+test('agent phone: say() sends to the picked session (a photo\'s words may even start with a slash); busy() by project', async () => {
+  const tg = fakeTelegram(), agents = fakeAgents();
+  const hub = createAgentPhone({ telegram: tg, agents, settings: () => ({ chatId: 1, switches: {} }), projectDir: (p) => p });
+  await hub.command(1, '/new claude shop');
+  assert.equal(hub.project, 'shop');
+  await hub.say(1, '/look\n(ดูรูปที่ .uncle/inbox/1.jpg)');
+  assert.deepEqual(agents.calls.at(-1), ['send', 's1', '/look\n(ดูรูปที่ .uncle/inbox/1.jpg)']);
+  agents.sessions[0].status = 'working';
+  assert.equal(hub.busy('shop'), true);
+  assert.equal(hub.busy('other'), false);
+});

@@ -145,12 +145,15 @@ function createAgentPhone({ telegram, agents, settings, projectDir, getResume = 
       default: break;
     }
     if (!current || text.startsWith('/')) return false;
-    if (typed && asks.get(typed)?.id === current) { await answer(chatId, typed, { decision: 'allow', text }, text); return true; }
+    await say(chatId, text);
+    return true;
+  }
+  // what you said to the picked session: the answer to its question, else a message (added to the turn under way while it works)
+  async function say(chatId, text) {
+    if (typed && asks.get(typed)?.id === current) return answer(chatId, typed, { decision: 'allow', text }, text);
     const working = info(current)?.status === 'working';
     await agents.send(current, text);
-    if (working) await telegram.send(chatId, '➕ ส่งแทรกให้ Agent แล้ว');
-    else line(current, `👤 ${short(text, 200)}`);
-    return true;
+    return working ? telegram.send(chatId, '➕ ส่งแทรกให้ Agent แล้ว') : line(current, `👤 ${short(text, 200)}`);
   }
 
   // Vibecode's /code and /create: the project's live session (open already, or picked up again, or new)
@@ -160,7 +163,7 @@ function createAgentPhone({ telegram, agents, settings, projectDir, getResume = 
     return command(chatId, `${getResume(project, agent) ? '/resume' : '/new'} ${agent} ${project}`);
   }
 
-  return { onEvent, command, callback, open, get current() { return current; }, HELP };
+  return { onEvent, command, callback, open, say, busy: (project) => agents.list().some((s) => s.title === project && s.status !== 'idle'), get project() { return info(current)?.title; }, get current() { return current; }, HELP };
 }
 
 module.exports = { createAgentPhone, HELP };
