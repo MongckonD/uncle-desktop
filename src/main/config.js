@@ -34,13 +34,19 @@ const DEFAULTS = {
   motionAsked: false, // she asked once, Windows' animations being off, whether to move anyway
   render: 'auto',   // how her window is drawn: 'auto', 'gl' (OpenGL) or 'software' (no graphics card), for PCs that show it black
   follow: true,      // with several screens, she follows the pointer to the one you're on
+  lockPos: false,    // her place locked: she doesn't go anywhere by herself (lockAt: where, lockDrag: you can still move her)
+  lockDrag: false,
+  lockAt: null,
+  ghost: false,      // out of sight, still working: listening, answering aloud, Telegram, jobs
+  ghostShow: 'voice', // while out of sight: 'voice' (just her voice) or 'peek' (she comes out to answer, then goes)
+  ghostBadges: true, // ...and the mic and player badges stay
   jealous: true,     // she gets jealous when she sees you on another AI (bond.js)
   reminders: [],     // the reminders she keeps: [{ id, at, text, made }] (reminders.js)
   bond: null,        // how close she is to you: { xp, first, last, days, streak, caps } (bond.js)
   pcReact: true,     // she reacts to your PC: the processor at full tilt, the battery, the network, a USB stick, a game (pc.js)
   watchScreen: false, // she looks at your screen now and then and says something about it (look.js)
   lookAsked: false,  // she told you what looking means (where the picture goes) and you said yes
-  hotkeys: { stopJob: 'Control+Alt+X', toggle: 'Control+Alt+C', voice: 'Control+Alt+V', mute: 'Control+Alt+M' }, // '' turns one off (her settings)
+  hotkeys: { stopJob: 'Control+Alt+X', toggle: 'Control+Alt+C', voice: 'Control+Alt+V', mute: 'Control+Alt+M', ghost: 'Control+Alt+H' }, // '' turns one off (her settings)
   learn: true,       // after a few exchanges she notes what she learned about you in me.md (not with Claude Code)
 };
 

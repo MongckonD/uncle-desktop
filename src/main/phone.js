@@ -9,7 +9,7 @@ const HELP = `คุยกับฉันได้เลย:
 • ส่งข้อความเสียง — ฉันฟังภาษาไทยได้
 • ส่งรูป — "อ่านใบเสร็จนี้", "นี่คืออะไร"
 • ส่งวิดีโอสั้น — ฉันดูภาพและฟังเสียงในคลิป
-/new เริ่มเรื่องใหม่ · /help ดูวิธีใช้
+/new เริ่มเรื่องใหม่ · /help ดูวิธีใช้ · /hide ซ่อนตัวละครบนคอม (ยังทำงานอยู่) · /show เรียกกลับ
 
 💻 Vibecode (สั่ง Claude Code / Codex บนคอม):
 /projects รายชื่อโปรเจกต์ · /create ชื่อ [codex] สร้างใหม่ · /project ชื่อ เลือก
@@ -24,7 +24,7 @@ const HELP = `คุยกับฉันได้เลย:
 // coding: her Vibecode (vibe.js, plus shot(url)); checkPin(pin) for the risky ones (PR, undo)
 // remote: { screen() -> png, pc(task) -> text, answer({ jobId, approvalId, yes, text }), tell(text), stop(), power(action) -> text }
 // for the switches screen, control, power
-function createPhone({ telegram, settings, answer, transcribe, speak, media, coding = null, remote = null, checkPin = () => false, setProject = () => {}, idleSeconds = () => 0, onReply = null, log = () => {} }) {
+function createPhone({ telegram, settings, answer, transcribe, speak, media, coding = null, remote = null, checkPin = () => false, setProject = () => {}, setGhost = () => {}, idleSeconds = () => 0, onReply = null, log = () => {} }) {
   let mode = 'chat'; // 'code': what you send goes to the project's coding agent
   const history = []; // the last turns with your phone, for follow-ups
   const asks = new Map(); // a tool waiting for your tap: id -> resolve
@@ -158,6 +158,7 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
       if (m.kind === 'text') {
         if (/^\/(start|help)\b/.test(m.text)) return telegram.send(chatId, HELP);
         if (/^\/new\b/.test(m.text)) { history.length = 0; return telegram.send(chatId, 'เริ่มเรื่องใหม่แล้ว'); }
+        if (/^\/(show|hide)\b/.test(m.text)) { setGhost(m.text.startsWith('/hide')); return telegram.send(chatId, m.text.startsWith('/hide') ? 'ซ่อนตัวละครบนคอมแล้ว ยังทำงานอยู่' : 'ตัวละครกลับมาบนคอมแล้ว'); }
         if (remote && /^\/(screen|pc|pcstop|tell|lock|sleep|shutdown|restart)\b/.test(m.text)) return await remoteCommand(chatId, m.text);
         if (remote && pcAsk?.answerNeeded && !m.text.startsWith('/')) return await pcAnswer(chatId, true, m.text);
         if (coding && m.text.startsWith('/') && (await codeCommand(chatId, m.text)) !== false) return undefined;

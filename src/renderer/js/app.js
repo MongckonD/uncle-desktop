@@ -193,8 +193,42 @@ async function boot() {
     const mp=document.getElementById('mini-player'), mpRect=mp?.getBoundingClientRect();const onPlayer=mp&&!mp.hidden&&mouse.x>=mpRect.left&&mouse.x<=mpRect.right&&mouse.y>=mpRect.top&&mouse.y<=mpRect.bottom;
     const pcStop=document.getElementById('computer-stop'), pcRect=pcStop.getBoundingClientRect();const onComputer=!pcStop.hidden&&mouse.x>=pcRect.left&&mouse.x<=pcRect.right&&mouse.y>=pcRect.top&&mouse.y<=pcRect.bottom;
     document.body.style.cursor = onChip() ? 'pointer' : '';
+    if (capri.ghost) return setInteractive(Boolean(onComputer || (document.body.classList.contains('ghost-badges') && (onSpeech || onMic || onPlayer))));
     return setInteractive(Boolean(onPanel || onSpeech || onMic || onComputer || onPlayer || capri.hit(mouse.x, mouse.y) || onChip()));
   };
+  // Her place locked (her menu): she stays where she is; with lockDrag you can still put her elsewhere
+  let lockOn = false;
+  function lockLook(cfg) {
+    capri.locked = Boolean(cfg.lockPos); capri.lockDrag = Boolean(cfg.lockDrag);
+    if (capri.locked && !lockOn && !cfg.lockAt) host.setConfig({ lockAt: { x: Math.round(capri.pos.x), y: Math.round(capri.pos.y) } });
+    lockOn = capri.locked;
+  }
+  window.addEventListener('mouseup', () => {
+    if (capri.locked && capri.lockDrag && capri.dragging) setTimeout(() => host.setConfig({ lockAt: { x: Math.round(capri.pos.x), y: Math.round(capri.pos.y) } }), 1500);
+  });
+  // Out of sight, still working (her menu): nothing of her on screen, clicks go through, the mic and
+  // player badges if you like. Something to answer (buttons), or ghostShow 'peek', brings her out a while.
+  let ghostCfg = {}, peeking = false, peekTimer = 0;
+  function ghostLook(cfg) {
+    ghostCfg = cfg;
+    if (!cfg.ghost) { clearInterval(peekTimer); peeking = false; }
+    const on = Boolean(cfg.ghost) && !peeking;
+    document.body.classList.toggle('ghost', on);
+    document.body.classList.toggle('ghost-badges', cfg.ghostBadges !== false);
+    capri.ghost = on;
+    refreshHit();
+  }
+  function peekOut() {
+    if (!ghostCfg.ghost) return;
+    peeking = true; ghostLook(ghostCfg); clearInterval(peekTimer);
+    let calm = 0;
+    peekTimer = setInterval(() => {
+      calm = speechUI.source || capri.busy || (panel.visible && !chat.open) ? 0 : calm + 1;
+      if (calm >= 8) { clearInterval(peekTimer); peeking = false; ghostLook(ghostCfg); }
+    }, 1000);
+  }
+  const panelSay = panel.say.bind(panel);
+  panel.say = (msg) => { if (capri.ghost && (msg.actions?.length || ghostCfg.ghostShow === 'peek')) peekOut(); return panelSay(msg); };
   // Her biochip: her eyes on it follow the pointer over it, and she comes out when you click it
   // (only then, so the pointer passing through that corner doesn't call her back).
   // Her mask, asleep: the pointer coming over it stirs her, and a moment of that wakes her up.
@@ -398,7 +432,7 @@ async function boot() {
   const tellJob = (text) => ['running'].includes(computerUI.state?.status) ? host.computerTell(text).catch(() => false) : false;
   chat.onJobTell = tellJob;
   listeningUI.onJobControl=async text=>{if(/^(?:หยุด(?:งาน|ทำงาน)?|ยกเลิก(?:งาน)?|stop|cancel)[.!\s]*$/i.test(text)){host.computerStop();speechUI.stop();}else if(await tellJob(text))listeningUI.setStatus('รับทราบ: '+text);else listeningUI.setStatus('กำลังทำงานอยู่ — พูดหยุดงานเพื่อยกเลิก');};
-  chat.onReply = (text) => { if (listeningUI.submitting) listeningUI.speakFeedback(text); else speechUI.reply(text); };
+  chat.onReply = (text) => { if (capri.ghost && ghostCfg.ghostShow === 'peek') peekOut(); if (listeningUI.submitting) listeningUI.speakFeedback(text); else speechUI.reply(text); };
   chat.onSpeechStop = () => { speechUI.stop(); listeningUI.stop(); };
   brain.onTalk = () => chat.start();
   // Getting her chat going with buttons (setup.js): Ollama and a model, a key, or an address
@@ -740,13 +774,14 @@ async function boot() {
     const res = await moveTo(there.id);
     return res && { y: gy - res.origin.y };
   };
-  capri.onScreenOf = (cursor) => capri.jumpScreen(async () => {
+  capri.onScreenOf = (cursor) => !capri.locked && capri.jumpScreen(async () => {
     await moveTo(cursor.display);
     return host.cursor();
   }, { toPointer: true });
   // to screen `id`: jumping over the shared edge if there's one at her height, else teleporting
   const goToScreen = async (id) => {
     if (!screens || id === screens.current) return;
+    if (capri.locked) { panel.say({ kind: 'info', line: 'ล็อกตำแหน่งอยู่ ปลดล็อกก่อนนะ (คลิกขวา › พฤติกรรม)', hold: 4000 }); return; }
     const mid = capri.screenPoint(118, 232);
     const side = [-1, 1].find((s) => beyond(s, Math.max(120, mid.y - 140))?.id === id);
     if (side && (await capri.leapTo(side))) return;
@@ -763,7 +798,7 @@ async function boot() {
     const elsewhere = followOn && screens && screens.list.length > 1 && at && !at.inside && at.display != null && at.display !== screens.current;
     awayChecks = elsewhere ? awayChecks + 1 : 0;
     if (awayChecks < FOLLOW_AFTER) return;
-    if (capri.busy || capri.dragging || capri.stowed || capri.dormant || capri.hidden || capri.act || capri.pointing) return;
+    if (capri.busy || capri.dragging || capri.stowed || capri.locked || capri.ghost || capri.dormant || capri.hidden || capri.act || capri.pointing) return;
     if (!['stand', 'sit'].includes(capri.stance) || capri.mode === 'sleep' || capri.mode === 'alert' || chat.open || guide.running) return;
     awayChecks = 0;
     goToScreen(at.display);
@@ -791,6 +826,7 @@ async function boot() {
     wantsOut = cfg.visible !== false;
     reminders.sync(cfg.reminders); // one may have been cancelled from her menu
     capri.wander = cfg.wander;
+    lockLook(cfg); ghostLook(cfg);
     capri.possessWindows = cfg.possess;
     capri.restOn = cfg.rest || 'corner';
     applyMotion(cfg.motion);
@@ -1111,8 +1147,9 @@ async function boot() {
 
   // entrance: her face big in the corner says hi, then she dives down to her spot
   // (put away last time: she starts in her biochip)
+  lockLook(config); ghostLook(config);
   if (config.visible === false) capri.stowNow();
-  else await capri.materialize(capri.spot('post'));
+  else await capri.materialize(config.lockPos && config.lockAt ? { x: Math.min(config.lockAt.x, innerWidth - 60), y: Math.min(config.lockAt.y, capri.view.floor) } : capri.spot('post'));
   // Windows has its animations off and she's following it: she barely moves. The first time, she
   // says so and asks whether to move anyway (her menu › Animations changes it later).
   if (reducedMotion.setting === 'auto' && reducedMotion.system && !config.motionAsked) {

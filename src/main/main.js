@@ -242,6 +242,7 @@ const HOTKEY_ACTIONS = {
   toggle: () => toggleVisible(),
   voice: () => sendCommand('listening-toggle'),
   mute: () => { listening?.stop(); sendCommand('listening-stop'); },
+  ghost: () => updateConfig({ ghost: !config.load().ghost }),
 };
 const hotkeys = () => ({ ...config.DEFAULTS.hotkeys, ...config.load().hotkeys });
 // Registered again from scratch; returns the actions whose keys another app holds (or that aren't keys).
@@ -681,6 +682,15 @@ function rebuildTray() {
       ],
     },
     wander: { label: t.wander, type: 'checkbox', checked: cfg.wander, click: (item) => updateConfig({ wander: item.checked }) },
+    lock: { label: th ? 'ล็อกตำแหน่ง (ไม่เดินไปไหนเอง)' : 'Lock her place (she stays put)', type: 'checkbox', checked: cfg.lockPos, click: (item) => updateConfig({ lockPos: item.checked, lockAt: null }) },
+    lockDrag: { label: th ? '   ↳ ลากย้ายได้แม้ล็อก' : '   ↳ Can still be dragged', type: 'checkbox', checked: cfg.lockDrag, enabled: cfg.lockPos, click: (item) => updateConfig({ lockDrag: item.checked }) },
+    ghost: { label: th ? 'ซ่อน (ทำงานเบื้องหลัง)' : 'Hide, keep working', type: 'checkbox', checked: cfg.ghost, accelerator: hotkeys().ghost || undefined, click: (item) => updateConfig({ ghost: item.checked }) },
+    ghostOptions: { label: th ? 'ตอนซ่อนแบบทำงานเบื้องหลัง' : 'While hidden, working', submenu: [
+      { label: th ? 'ตอบด้วยเสียงอย่างเดียว' : 'Answer by voice only', type: 'radio', checked: cfg.ghostShow !== 'peek', click: () => updateConfig({ ghostShow: 'voice' }) },
+      { label: th ? 'โผล่ออกมาตอบ แล้วกลับไปซ่อน' : 'Come out to answer, then hide again', type: 'radio', checked: cfg.ghostShow === 'peek', click: () => updateConfig({ ghostShow: 'peek' }) },
+      { type: 'separator' },
+      { label: th ? 'แสดงสถานะไมค์และเพลง' : 'Show the mic and player badges', type: 'checkbox', checked: cfg.ghostBadges !== false, click: (item) => updateConfig({ ghostBadges: item.checked }) },
+    ] },
     possess: { label: t.possess, type: 'checkbox', checked: cfg.possess, click: (item) => updateConfig({ possess: item.checked }) },
     jealous: { label: t.jealous, type: 'checkbox', checked: cfg.jealous !== false, click: (item) => updateConfig({ jealous: item.checked }) },
     pcReact: { label: t.pcReact, type: 'checkbox', checked: cfg.pcReact !== false, click: (item) => updateConfig({ pcReact: item.checked }) },
@@ -748,7 +758,7 @@ function rebuildTray() {
   };
   // every setting, as the tabs of her settings dialog (settings.js renders them, menu:click runs them)
   settingsGroups = [
-    { id: 'appearance', title: th ? 'ตัวละคร' : 'Character', items: [item.character, item.quick, item.size, item.view, item.visible, item.custom] },
+    { id: 'appearance', title: th ? 'ตัวละคร' : 'Character', items: [item.character, item.quick, item.size, item.view, item.visible, item.ghost, item.ghostOptions, item.custom] },
     { id: 'chat', title: th ? 'AI แชต' : 'Chat AI', items: item.chat.submenu },
     { id: 'voice', title: th ? 'เสียงและไมค์' : 'Voice', items: [
       { label: th ? 'เสียงพูดภาษาไทย…' : 'Speech settings…', click: () => sendCommand('speech') },
@@ -758,7 +768,7 @@ function rebuildTray() {
       { label: th ? 'คืนตำแหน่งสถานะไมค์และเพลง' : 'Reset mic and player positions', click: () => updateConfig({ badgePos: {} }) },
       ...item.sound.submenu,
     ] },
-    { id: 'behavior', title: th ? 'พฤติกรรม' : 'Behavior', items: [item.wander, { label: th ? 'มินิเพลเยอร์ และเต้นตามเพลง' : 'Mini player, and dancing to music', type: 'checkbox', checked: cfg.miniPlayer !== false, click: (it) => updateConfig({ miniPlayer: it.checked }) }, item.possess, item.jealous, item.pcReact, item.lookAuto, item.rest, item.motion, item.screen] },
+    { id: 'behavior', title: th ? 'พฤติกรรม' : 'Behavior', items: [item.wander, item.lock, item.lockDrag, { label: th ? 'มินิเพลเยอร์ และเต้นตามเพลง' : 'Mini player, and dancing to music', type: 'checkbox', checked: cfg.miniPlayer !== false, click: (it) => updateConfig({ miniPlayer: it.checked }) }, item.possess, item.jealous, item.pcReact, item.lookAuto, item.rest, item.motion, item.screen] },
     // her assistant: Gmail and Google Calendar (MCP), and her alerts
     { id: 'assistant', title: th ? 'ผู้ช่วย' : 'Assistant', items: [
       ...['gmail', 'calendar'].map((kind) => {
@@ -899,6 +909,7 @@ function rebuildTray() {
     quickModel,
     { label: t.mute, type: 'checkbox', checked: cfg.muted, click: (it) => updateConfig({ muted: it.checked }) },
     item.visible,
+    item.ghost,
     ...(computer?.busy ? [{ label: th ? 'หยุดงานควบคุมเครื่อง' : 'Stop computer job', accelerator: hotkeys().stopJob || undefined, click: () => computer?.stop() }] : []),
     ...(reminders.length ? [{
         label: t.reminders,
@@ -1016,6 +1027,7 @@ function startPhone() {
   phone = createPhone({
     telegram, settings: () => ({ ...phoneSettings(), project: config.load().vibe?.project || null }), answer: phoneAnswer, coding, remote,
     setProject: (project) => updateConfig({ vibe: { ...config.load().vibe, project } }),
+    setGhost: (on) => updateConfig({ ghost: on }),
     onReply: (question, text) => { if (phoneSettings().pcVoice) sendCommand('assistant-alert', { kind: 'phone', question, text }); },
     checkPin: (pin) => Boolean(phoneSettings().pin) && /^\d{4,8}$/.test(pin) && pinHash(pin) === phoneSettings().pin, idleSeconds: () => powerMonitor.getSystemIdleTime(),
     transcribe: async (wav) => {

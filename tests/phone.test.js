@@ -86,3 +86,11 @@ test('phone: a computer job from the phone asks, steps and ends on the phone; /t
   assert.deepEqual(calls, [['pc', 'เปิด Spotify'], ['answer', true, '', 'a1'], ['answer', true, 'เพลงชิล', 'a2'], ['tell', 'เบาเสียงด้วย'], ['stop'], ['pc', 'เปิดเพลง']]);
   assert.ok(tg.out.some((o) => o.text === '✅ งานบนคอม: เล่นแล้ว') && tg.out.some((o) => o.file === 'photo'));
 });
+
+test('phone: /hide and /show put her out of sight on the computer and back', async () => {
+  const tg = fakeTelegram(), ghost = [];
+  const phone = createPhone({ telegram: tg, settings: () => ({ switches: on, chatId: 1 }), setGhost: (v) => ghost.push(v), answer: async () => '', transcribe: async () => '', speak: async () => null, media: async () => '' });
+  await phone.onMessage({ kind: 'text', text: '/hide', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/show', chatId: 1 });
+  assert.deepEqual(ghost, [true, false]);
+});
