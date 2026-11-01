@@ -143,7 +143,7 @@ function createAgents({ onEvent = () => {}, run = spawn, modelFor = () => null, 
     const driver = DRIVERS[agent];
     if (!driver) throw new Error(`ไม่รู้จัก Agent: ${agent}`);
     const id = randomUUID().slice(0, 8);
-    const s = { id, agent, cwd, title: title || cwd, status: 'starting', resume, asks: new Map(), started: Date.now(), log: [] };
+    const s = { id, agent, cwd, title: title || cwd, status: 'idle', resume, asks: new Map(), started: Date.now(), log: [] };
     const emit = (evt) => {
       if (evt.type === 'session') s.resume = evt.resume;
       if (evt.type === 'ask') { s.asks.set(evt.askId, evt); s.status = 'asking'; }
@@ -157,7 +157,6 @@ function createAgents({ onEvent = () => {}, run = spawn, modelFor = () => null, 
     s.driver.child.on('exit', (code) => { sessions.delete(id); onEvent({ id, type: 'closed', code }); });
     s.driver.child.stderr?.on('data', (d) => log(`[agents] ${agent}: ${short(d, 300)}`));
     sessions.set(id, s);
-    s.status = 'idle';
     return id;
   }
   const get = (id) => { const s = sessions.get(id); if (!s) throw new Error('ไม่มี session นี้ (อาจปิดไปแล้ว)'); return s; };
