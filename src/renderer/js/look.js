@@ -111,7 +111,6 @@ export class Look {
     const rect = win ? () => this.capri.windows.wins.find((o) => o.id === win.id) || null : () => ({ x: 0, y: 0, w, h: floor });
     const toward = win ? Math.sign(win.x + win.w / 2 - this.capri.pos.x) || 1 : this.capri.towardCenter();
     this.capri.perform('curious', toward);
-    this.fx.cutin(...this.capri.cutinAt(-toward), { kind: 'eyes', life: 520 });
     this.fx.scan(rect, { covers: () => (win ? this.capri.coversOf(win.id) : []) });
     this.voice.play('charge');
   }

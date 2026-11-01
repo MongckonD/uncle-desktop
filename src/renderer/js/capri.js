@@ -17,7 +17,6 @@ const ASLEEP = 1000 / 6;
 const SLEEP_AFTER = 10 * 60 * 1000;
 const DOZE_AFTER = 20 * 1000; // asleep this long, she comes apart down to her mask
 const GRAVITY = 2600; // px/s²
-const THIGH = 73;     // hip to knee, sprite px (see sprite.js)
 const DEG = Math.PI / 180;
 
 // Thrown (throwHer): her middle, where she spins and where she's held while she flies (sprite px),
@@ -308,11 +307,6 @@ export class Capri {
   // Which way is the middle of the screen from her, -1 or 1.
   towardCenter() {
     return this.pos.x > this.view.w / 2 ? -1 : 1;
-  }
-
-  // the reaching side of the cut-out points toward screen x
-  faceToward(x) {
-    this.facing = x < this.pos.x ? 1 : -1;
   }
 
   get floor() {
@@ -878,30 +872,6 @@ export class Capri {
     return true;
   }
 
-  // Where a cut-in goes, as fx.cutin's (x, y, dir): next to her head on the `dir` side, else on
-  // the other side (unless `flip` is off because something is going on there), else over her mane.
-  cutinAt(dir, { flip = true } = {}) {
-    const s = this.scale;
-    const h = this.head();
-    const gap = 85 * s + 24, width = 274; // the band plus its slant, see fx.js
-    const fits = (d) => (d > 0 ? h.x + gap + width < this.view.w - 8 : h.x - gap - width > 8);
-    if (fits(dir)) return [h.x + dir * gap, h.y - 18, dir];
-    if (flip && fits(-dir)) return [h.x - dir * gap, h.y - 18, -dir];
-    return [clamp(h.x - width / 2, 8, this.view.w - width - 8), Math.max(56, h.top - 58), 1];
-  }
-
-  // Flat-colour impact frames, one drawing each.
-  async flash(colors) {
-    const p = this.p;
-    for (const color of colors) {
-      p.sil = color;
-      p.silAmount = 1;
-      this.drawFrame();
-      await sleep(ON_ONES);
-    }
-    p.silAmount = 0;
-  }
-
   // Effects and sounds pinned to drawings of an act (the third item of a key in acting.js).
   onCue(cue) {
     const s = this.scale;
@@ -925,11 +895,7 @@ export class Capri {
       case 'speak':
         this.fireSpeak();
         break;
-      case 'laugh':
-        this.fx.cutin(...this.cutinAt(this.act?.player.dir || this.towardCenter()), { kind: pick(['laugh', 'grin']) });
-        break;
-      case 'stare': // every eye she has, on you
-        this.fx.cutin(...this.cutinAt(this.act?.player.dir || this.towardCenter()), { kind: 'many', life: 640 });
+      case 'laugh': case 'stare': // (their cut-ins were Capri's close-ups, gone with her pictures)
         break;
       case 'notice':
         this.twitch();
@@ -944,7 +910,6 @@ export class Capri {
         }
         break;
       case 'grin':
-        if (this.zapAt && Math.random() < 0.6) this.fx.cutin(...this.cutinAt(-this.zapAt.dir), { kind: 'look', life: 560 });
         this.zapAt = null;
         break;
       // pointing at something (pointAt)
@@ -968,8 +933,6 @@ export class Capri {
             this.fx.bolt(hand, pt.aim, { life: 260, forks: 3, width: 3 });
             this.fx.ring(pt.aim.x, pt.aim.y, { size: 0.55 });
             this.fx.burst(pt.aim.x, pt.aim.y, { count: 12, power: 0.5, spread: 20 });
-            // her eyes lock on, on the side away from it
-            this.fx.cutin(...this.cutinAt(-pt.dir, { flip: false }), { kind: 'eyes', life: 480 });
           }
           this.voice.play('bolt');
         }
@@ -1034,7 +997,6 @@ export class Capri {
         this.fx.crackle(hand, { life: 640, radius: 70 * s + 14, count: 3 });
         const at = hand();
         this.fx.burst(at.x, at.y, { count: 14, inward: true, power: 0.5, spread: 90 * s });
-        this.fx.cutin(...this.cutinAt(-sky.dir, { flip: false }), { kind: 'eyes', life: 600 }); // never over the road
         this.voice.play('charge');
         break;
       }
@@ -1583,42 +1545,6 @@ export class Capri {
     this.busy = false;
   }
 
-  // Her intro, when she starts: she grabs your screen by its edges, huge, says hi, then her hands
-  // slip and she dives down to where she stands, and her body unfolds from her face (fx.intro).
-  // `still`: no motion, it comes and goes where it is (Windows' animations off).
-  async intro(at, { label = 'hi', caption = 'PROJECT CAPRICORN', still = reducedMotion.matches } = {}) {
-    const p = this.p;
-    this.pos = { ...at };
-    this.faceCenter();
-    this.setStance('stand');
-    this.busy = true;
-    this.onTeleport?.('start'); // the panel waits for her
-    p.alpha = 0;
-    p.collapse = 1;
-    p.dissolve = 0.5;
-    this.place();
-    const head = this.head(at, this.facing);
-    await this.fx.intro({
-      to: { x: head.x, y: head.y, size: 100 * this.scale },
-      label,
-      caption,
-      still,
-      onCue: (cue) => {
-        if (cue === 'open') this.voice.play('charge'); // the edges of the screen crackling
-        else if (cue === 'hand') this.voice.play('land'); // a hand on the edge
-        else if (cue === 'wave') this.voice.play('rise'); // a hand off it, to wave
-        else if (cue === 'grab') {
-          this.voice.play('land'); // she slams into it
-          this.voice.play('bolt');
-        } else if (cue === 'hi') this.voice.play('hello');
-        else if (cue === 'slip') this.voice.play('teleport-out');
-      },
-    });
-    await this.arrive(at, { face: this.facing, beam: false });
-    this.busy = false;
-    this.onTeleport?.('end');
-  }
-
   // ---------- showing you things ----------
 
   // The point of `rect` (overlay coordinates) she aims at from where she is: its closest point,
@@ -1726,11 +1652,6 @@ export class Capri {
     }
     if (cursor.display == null || !this.onScreenOf) return null;
     return this.onScreenOf(cursor);
-  }
-
-  setHidden(hidden) {
-    this.hidden = hidden;
-    this.root.hidden = hidden;
   }
 
   // ---------- pointer ----------
