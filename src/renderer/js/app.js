@@ -197,15 +197,18 @@ async function boot() {
     return setInteractive(Boolean(onPanel || onSpeech || onMic || onComputer || onPlayer || capri.hit(mouse.x, mouse.y) || onChip()));
   };
   // Her place locked (her menu): she stays where she is; with lockDrag you can still put her elsewhere
-  let lockOn = false;
-  function lockLook(cfg) {
+  // Her place is kept per screen: lockAt = { [screen id]: { x, y } }, so each screen has its own
+  let lockMap = {}, lockOn = false;
+  const lockKey = () => String(screens?.current ?? 'main');
+  const lockHere = () => { lockMap = { ...lockMap, [lockKey()]: { x: Math.round(capri.pos.x), y: Math.round(capri.pos.y) } }; host.setConfig({ lockAt: lockMap }); };
+  const lockPlace = () => { const at = lockMap[lockKey()]; return at && { x: Math.min(at.x, innerWidth - 60), y: Math.min(at.y, capri.view.floor) }; };
+  function lockLook(cfg, save = true) {
+    lockMap = cfg.lockAt || {};
     capri.locked = Boolean(cfg.lockPos); capri.lockDrag = Boolean(cfg.lockDrag);
-    if (capri.locked && !lockOn && !cfg.lockAt) host.setConfig({ lockAt: { x: Math.round(capri.pos.x), y: Math.round(capri.pos.y) } });
+    if (save && capri.locked && !lockOn && !lockMap[lockKey()]) lockHere();
     lockOn = capri.locked;
   }
-  window.addEventListener('mouseup', () => {
-    if (capri.locked && capri.lockDrag && capri.dragging) setTimeout(() => host.setConfig({ lockAt: { x: Math.round(capri.pos.x), y: Math.round(capri.pos.y) } }), 1500);
-  });
+  window.addEventListener('mouseup', () => { if (capri.locked && capri.lockDrag && capri.dragging) setTimeout(lockHere, 1500); });
   // Out of sight, still working (her menu): nothing of her on screen, clicks go through, the mic and
   // player badges if you like. Something to answer (buttons), or ghostShow 'peek', brings her out a while.
   let ghostCfg = {}, peeking = false, peekTimer = 0;
@@ -781,7 +784,6 @@ async function boot() {
   // to screen `id`: jumping over the shared edge if there's one at her height, else teleporting
   const goToScreen = async (id) => {
     if (!screens || id === screens.current) return;
-    if (capri.locked) { panel.say({ kind: 'info', line: 'ล็อกตำแหน่งอยู่ ปลดล็อกก่อนนะ (คลิกขวา › พฤติกรรม)', hold: 4000 }); return; }
     const mid = capri.screenPoint(118, 232);
     const side = [-1, 1].find((s) => beyond(s, Math.max(120, mid.y - 140))?.id === id);
     if (side && (await capri.leapTo(side))) return;
@@ -789,6 +791,14 @@ async function boot() {
       await moveTo(id);
       return host.cursor();
     });
+  };
+  // locked: picked in her menu, she goes (it's you asking) and settles where that screen's lock is (first time: where she lands)
+  const goToScreenLocked = async (id) => {
+    const unlock = capri.locked; capri.locked = false;
+    try { await goToScreen(id); } finally { capri.locked = unlock; }
+    if (!capri.locked) return;
+    const at = lockPlace();
+    if (at) await capri.teleport(at, { force: true }); else lockHere();
   };
   // The pointer on another of your screens for a few seconds: she follows you there, when she's
   // free to (not in the middle of something, not asleep, not put away).
@@ -1012,7 +1022,7 @@ async function boot() {
         look.setAuto(cmd.on);
         break;
       case 'goScreen': // a screen picked in her menu: she goes there
-        goToScreen(cmd.id);
+        (capri.locked ? goToScreenLocked : goToScreen)(cmd.id);
         break;
       case 'screens': // a screen plugged in, unplugged or moved
         refreshScreens();
@@ -1147,9 +1157,10 @@ async function boot() {
 
   // entrance: her face big in the corner says hi, then she dives down to her spot
   // (put away last time: she starts in her biochip)
-  lockLook(config); ghostLook(config);
+  lockLook(config, false); ghostLook(config);
   if (config.visible === false) capri.stowNow();
-  else await capri.materialize(config.lockPos && config.lockAt ? { x: Math.min(config.lockAt.x, innerWidth - 60), y: Math.min(config.lockAt.y, capri.view.floor) } : capri.spot('post'));
+  else await capri.materialize((capri.locked && lockPlace()) || capri.spot('post'));
+  if (capri.locked && !lockPlace()) lockHere(); // locked, and this screen has no place yet: where she landed
   // Windows has its animations off and she's following it: she barely moves. The first time, she
   // says so and asks whether to move anyway (her menu › Animations changes it later).
   if (reducedMotion.setting === 'auto' && reducedMotion.system && !config.motionAsked) {

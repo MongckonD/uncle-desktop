@@ -36,7 +36,7 @@ const DEFAULTS = {
   follow: true,      // with several screens, she follows the pointer to the one you're on
   lockPos: false,    // her place locked: she doesn't go anywhere by herself (lockAt: where, lockDrag: you can still move her)
   lockDrag: false,
-  lockAt: null,
+  lockAt: null,          // { [screen id]: { x, y } }: the lock's place on each screen
   ghost: false,      // out of sight, still working: listening, answering aloud, Telegram, jobs
   ghostShow: 'voice', // while out of sight: 'voice' (just her voice) or 'peek' (she comes out to answer, then goes)
   ghostBadges: true, // ...and the mic and player badges stay

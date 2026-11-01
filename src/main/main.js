@@ -532,6 +532,9 @@ function badgeLook(key, label) {
 function updateConfig(patch) {
   if ('badges' in patch && !Object.values(patch.badges || {}).every((v) => ['full', 'icon'].includes(v))) throw new Error('Invalid badge look');
   if ('badgePos' in patch && !Object.values(patch.badgePos || {}).every((p) => Number.isFinite(p?.right) && Number.isFinite(p?.bottom))) throw new Error('Invalid badge position');
+  if ('lockAt' in patch && patch.lockAt !== null && !Object.values(patch.lockAt || {}).every((p) => Number.isFinite(p?.x) && Number.isFinite(p?.y))) throw new Error('Invalid lock place');
+  if ('ghostShow' in patch && !['voice', 'peek'].includes(patch.ghostShow)) throw new Error('Invalid hidden-mode answer');
+  if (['lockPos', 'lockDrag', 'ghost', 'ghostBadges'].some((k) => k in patch && typeof patch[k] !== 'boolean')) throw new Error('Invalid switch');
   if ('scale' in patch && (!Number.isFinite(patch.scale) || patch.scale < 0.45 || patch.scale > 1.6)) throw new Error('Invalid character scale');
   if ('characterFraming' in patch && !['full', 'bust'].includes(patch.characterFraming)) throw new Error('Invalid character framing');
   if ('voiceAgent' in patch) {patch.voiceAgent=voiceAgent.settings(patch.voiceAgent);voiceAgentAPI?.stop();voiceAgentSession=null;computer?.stop();sendCommand('voice-agent-stop');}
@@ -697,7 +700,7 @@ function rebuildTray() {
       ],
     },
     wander: { label: t.wander, type: 'checkbox', checked: cfg.wander, click: (item) => updateConfig({ wander: item.checked }) },
-    lock: { label: th ? 'ล็อกตำแหน่ง (ไม่เดินไปไหนเอง)' : 'Lock her place (she stays put)', type: 'checkbox', checked: cfg.lockPos, click: (item) => updateConfig({ lockPos: item.checked, lockAt: null }) },
+    lock: { label: th ? 'ล็อกตำแหน่ง (ไม่เดินไปไหนเอง)' : 'Lock her place (she stays put)', type: 'checkbox', checked: cfg.lockPos, click: (item) => updateConfig({ lockPos: item.checked, lockAt: item.checked ? null : cfg.lockAt }) },
     lockDrag: { label: th ? '   ↳ ลากย้ายได้แม้ล็อก' : '   ↳ Can still be dragged', type: 'checkbox', checked: cfg.lockDrag, enabled: cfg.lockPos, click: (item) => updateConfig({ lockDrag: item.checked }) },
     ghost: { label: th ? 'ซ่อน (ทำงานเบื้องหลัง)' : 'Hide, keep working', type: 'checkbox', checked: cfg.ghost, accelerator: hotkeys().ghost || undefined, click: (item) => updateConfig({ ghost: item.checked }) },
     ghostOptions: { label: th ? 'ตอนซ่อนแบบทำงานเบื้องหลัง' : 'While hidden, working', submenu: [
