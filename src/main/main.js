@@ -62,7 +62,7 @@ let telegram = null, phone = null; // your phone, through her Telegram bot
 let remote = null, remoteJob = null; // the computer from your phone (screen, a job, power), and the job it started
 // her Telegram settings, with what's off by default
 const PHONE_SWITCHES = { chat: true, approve: true, screen: false, control: false, power: false };
-const phoneSettings = () => { const t = config.load().telegram || {}; return { chatId: t.chatId || null, notify: t.notify || 'always', voiceReply: t.voiceReply || 'voice', switches: { ...PHONE_SWITCHES, ...t.switches }, pin: t.pin || '' }; };
+const phoneSettings = () => { const t = config.load().telegram || {}; return { chatId: t.chatId || null, notify: t.notify || 'always', voiceReply: t.voiceReply || 'voice', pcVoice: t.pcVoice === true, switches: { ...PHONE_SWITCHES, ...t.switches }, pin: t.pin || '' }; };
 const savePhone = (patch) => updateConfig({ telegram: { ...config.load().telegram, ...patch } });
 // a job for her page (renderer), answered later: decoding audio and video with Chromium
 const rendererCalls = new Map();
@@ -836,6 +836,7 @@ function rebuildTray() {
         { type: 'separator' },
         { label: th ? 'ตอบกลับเป็นเสียง' : 'Reply in her voice', enabled: false },
         radio('voiceReply', 'voice', th ? 'เมื่อคุณส่งเสียงมา' : 'When you send a voice message'), radio('voiceReply', 'always', th ? 'ทุกครั้ง' : 'Always'), radio('voiceReply', 'never', th ? 'ไม่ตอบเป็นเสียง' : 'Never'),
+        { label: th ? 'พูดคำตอบออกลำโพงคอมด้วย' : 'Also say the answer on the computer', type: 'checkbox', checked: s.pcVoice, click: (item) => savePhone({ pcVoice: item.checked }) },
         { type: 'separator' },
         sw('chat', th ? 'คุยและถามข้อมูลจากมือถือ' : 'Chat from your phone'),
         sw('approve', th ? 'อนุมัติงานจากมือถือ (ส่งเมล สร้างนัด…)' : 'Approve from your phone (send mail, events…)'),
@@ -1010,6 +1011,7 @@ function startPhone() {
   phone = createPhone({
     telegram, settings: () => ({ ...phoneSettings(), project: config.load().vibe?.project || null }), answer: phoneAnswer, coding, remote,
     setProject: (project) => updateConfig({ vibe: { ...config.load().vibe, project } }),
+    onReply: (question, text) => { if (phoneSettings().pcVoice) sendCommand('assistant-alert', { kind: 'phone', question, text }); },
     checkPin: (pin) => Boolean(phoneSettings().pin) && /^\d{4,8}$/.test(pin) && pinHash(pin) === phoneSettings().pin, idleSeconds: () => powerMonitor.getSystemIdleTime(),
     transcribe: async (wav) => {
       const s = config.load().listening, keys = setup.openKeys(config.load().apiKeys);

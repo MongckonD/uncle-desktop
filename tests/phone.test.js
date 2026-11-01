@@ -9,8 +9,8 @@ const fakeTelegram = () => {
 const on = { chat: true, approve: true };
 
 test('phone: text, voice (heard, then answered aloud), photo with its caption', async () => {
-  const tg = fakeTelegram(); const asked = [];
-  const phone = createPhone({ telegram: tg, settings: () => ({ switches: on, voiceReply: 'voice', chatId: 1 }),
+  const tg = fakeTelegram(); const asked = [], onPc = [];
+  const phone = createPhone({ telegram: tg, settings: () => ({ switches: on, voiceReply: 'voice', chatId: 1 }), onReply: (q, a) => onPc.push(q),
     answer: async ({ text, images }) => { asked.push([text, images.length]); return `ตอบ: ${text}`; },
     transcribe: async () => 'พรุ่งนี้มีนัดไหม', speak: async () => ({ bytes: Buffer.from('a'), ext: 'mp3', mime: 'audio/mpeg' }), media: async () => 'd2F2' });
   await phone.onMessage({ kind: 'text', text: 'สวัสดี', chatId: 1 });
@@ -20,6 +20,7 @@ test('phone: text, voice (heard, then answered aloud), photo with its caption', 
   assert.ok(tg.out.some((o) => o.text === '🎙 ได้ยินว่า: พรุ่งนี้มีนัดไหม'));
   assert.equal(tg.out.filter((o) => o.file === 'audio').length, 1); // only the voice message got a voice reply
   assert.equal(phone.history.length, 6);
+  assert.deepEqual(onPc, ['สวัสดี', 'พรุ่งนี้มีนัดไหม', 'อ่านใบเสร็จ']); // each answer offered to the computer too
 });
 
 test('phone: approvals with buttons; off when approving from the phone is off', async () => {

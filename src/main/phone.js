@@ -22,7 +22,7 @@ const HELP = `คุยกับฉันได้เลย:
 
 // coding: her Vibecode (vibe.js, plus shot(url)); checkPin(pin) for the risky ones (PR, undo)
 // remote: { screen() -> png, pc(task) -> text, power(action) -> text } for the switches screen, control, power
-function createPhone({ telegram, settings, answer, transcribe, speak, media, coding = null, remote = null, checkPin = () => false, setProject = () => {}, idleSeconds = () => 0, log = () => {} }) {
+function createPhone({ telegram, settings, answer, transcribe, speak, media, coding = null, remote = null, checkPin = () => false, setProject = () => {}, idleSeconds = () => 0, onReply = null, log = () => {} }) {
   let mode = 'chat'; // 'code': what you send goes to the project's coding agent
   const history = []; // the last turns with your phone, for follow-ups
   const asks = new Map(); // a tool waiting for your tap: id -> resolve
@@ -46,6 +46,7 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
     const text = await answer({ history: [...history], text: question, images, confirm: (tool, args) => confirm(chatId, tool, args) });
     remember('user', question); remember('assistant', text);
     await telegram.send(chatId, text || '…');
+    if (text) onReply?.(question, text); // also on the computer, aloud, when you like that
     const voice = settings().voiceReply;
     if (text && (voice === 'always' || (voice === 'voice' && heardVoice))) {
       try {

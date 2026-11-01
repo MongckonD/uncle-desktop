@@ -880,6 +880,10 @@ async function boot() {
         const actions = [{ id: 'read', label: 'อ่านให้ฟัง' }, ...(first ? [{ id: 'open', label: 'เปิดข่าว' }] : []), { id: 'ok', label: 'รับทราบ', primary: true }];
         panel.say({ kind: 'remind', face: 'smug', line: cmd.title, quote: cmd.text, actions, hold: null, onAction: (id) => { if (id === 'read') speechUI.play(`${cmd.title.replace(/^\W+/u, '')}. ${cmd.text}`).catch(() => {}); else if (id === 'open') host.openSite(first); if (id !== 'read') panel.hide(); } });
         if (cmd.kind === 'brief' && (await host.getConfig()).briefs?.voice !== false) speechUI.play(cmd.text).catch(() => {});
+      } else if (cmd.kind === 'phone') { // asked from Telegram: her answer here too, aloud
+        capri.wake();
+        panel.say({ kind: 'info', line: `📱 ${cmd.question.slice(0, 80)}`, quote: cmd.text, hold: 12000 });
+        speechUI.play(cmd.text).catch(() => {});
       } else panel.say({ kind: cmd.kind === 'error' ? 'error' : 'info', line: cmd.message, hold: cmd.kind === 'error' ? 9000 : 6000 });
       return;
     }
