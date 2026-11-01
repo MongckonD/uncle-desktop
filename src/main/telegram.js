@@ -57,6 +57,7 @@ function createTelegram({ getToken, getChat, setChat, onMessage, log = () => {},
     if (m.voice || m.audio) return onMessage({ kind: 'voice', fileId: (m.voice || m.audio).file_id, mime: (m.voice || m.audio).mime_type || 'audio/ogg', chatId, caption: m.caption || '' });
     if (m.photo?.length) return onMessage({ kind: 'photo', fileId: m.photo.at(-1).file_id, mime: 'image/jpeg', chatId, caption: m.caption || '' });
     if (m.document?.mime_type?.startsWith('image/')) return onMessage({ kind: 'photo', fileId: m.document.file_id, mime: m.document.mime_type, chatId, caption: m.caption || '' });
+    if (m.document) return onMessage({ kind: 'file', fileId: m.document.file_id, name: m.document.file_name || 'file', mime: m.document.mime_type || '', size: m.document.file_size || 0, chatId, caption: m.caption || '' });
     if (m.video || m.video_note || m.animation) { const v = m.video || m.video_note || m.animation; return onMessage({ kind: 'video', fileId: v.file_id, mime: v.mime_type || 'video/mp4', size: v.file_size || 0, chatId, caption: m.caption || '' }); }
     if (text) return onMessage({ kind: 'text', text, chatId });
     return send(chatId, 'ยังรับข้อความแบบนี้ไม่ได้ ส่งเป็นข้อความ เสียง รูป หรือวิดีโอนะ');
@@ -96,6 +97,8 @@ function createTelegram({ getToken, getChat, setChat, onMessage, log = () => {},
     form.set(kind, new Blob([bytes], { type: mime }), name);
     return call({ photo: 'sendPhoto', audio: 'sendAudio', video: 'sendVideo', document: 'sendDocument' }[kind], {}, { form });
   }
+  // the menu Telegram shows when you type /: [{ command, description }]
+  const setCommands = (commands) => call('setMyCommands', { commands });
   const typing = (chatId, action = 'typing') => call('sendChatAction', { chat_id: chatId, action }).catch(() => {});
 
   return {
@@ -104,7 +107,7 @@ function createTelegram({ getToken, getChat, setChat, onMessage, log = () => {},
     get running() { return running; },
     edit,
     me: () => call('getMe'),
-    startPairing, send, sendFile, typing, download, handle,
+    startPairing, send, sendFile, typing, download, handle, setCommands,
   };
 }
 

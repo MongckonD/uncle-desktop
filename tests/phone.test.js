@@ -94,3 +94,26 @@ test('phone: /hide and /show put her out of sight on the computer and back', asy
   await phone.onMessage({ kind: 'text', text: '/show', chatId: 1 });
   assert.deepEqual(ghost, [true, false]);
 });
+
+test('phone: /status, /say and /music (behind the computer switch), text files read out, PDFs refused', async () => {
+  const tg = fakeTelegram(), did = [], asked = [];
+  let sw = { ...on, control: false };
+  const phone = createPhone({ telegram: tg, settings: () => ({ switches: sw, chatId: 1 }), status: async () => '🖥 คอมเปิดอยู่', player: async (a) => did.push(a), say: (t) => did.push(`say:${t}`),
+    answer: async ({ text }) => { asked.push(text); return 'ok'; }, transcribe: async () => '', speak: async () => null, media: async () => '' });
+  tg.download = async () => Buffer.from('name,qty\negg,2\n');
+  await phone.onMessage({ kind: 'text', text: '/status', chatId: 1 });
+  assert.equal(tg.out.at(-1).text, '🖥 คอมเปิดอยู่');
+  await phone.onMessage({ kind: 'text', text: '/say สวัสดี', chatId: 1 });
+  assert.match(tg.out.at(-1).text, /ปิดอยู่/); assert.deepEqual(did, []); // switch off: nothing happens
+  sw = { ...on, control: true };
+  await phone.onMessage({ kind: 'text', text: '/say สวัสดี', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/music prev', chatId: 1 });
+  await phone.onMessage({ kind: 'text', text: '/music dance', chatId: 1 });
+  assert.deepEqual(did, ['say:สวัสดี', 'previous']);
+  assert.match(tg.out.at(-1).text, /ใช้แบบนี้: \/music/);
+  await phone.onMessage({ kind: 'file', fileId: 'f', name: 'orders.csv', mime: 'text/csv', size: 20, chatId: 1, caption: 'มีกี่แถว' });
+  assert.ok(asked[0].startsWith('มีกี่แถว') && asked[0].includes('--- orders.csv ---') && asked[0].includes('egg,2'));
+  await phone.onMessage({ kind: 'file', fileId: 'p', name: 'bill.pdf', mime: 'application/pdf', size: 20, chatId: 1 });
+  assert.match(tg.out.at(-1).text, /PDF.*ยังไม่รองรับ/);
+  assert.equal(asked.length, 1);
+});

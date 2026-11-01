@@ -1051,6 +1051,9 @@ function startPhone() {
     telegram, settings: () => ({ ...phoneSettings(), project: config.load().vibe?.project || null }), answer: phoneAnswer, coding, remote, hub: agentPhone,
     setProject: (project) => updateConfig({ vibe: { ...config.load().vibe, project } }),
     setGhost: (on) => updateConfig({ ghost: on }),
+    status: async () => phoneStatus(),
+    player: (action) => launch.media(action),
+    say: (text) => sendCommand('assistant-alert', { kind: 'phone', question: 'ข้อความจาก Telegram', text }),
     onReply: (question, text) => { if (phoneSettings().pcVoice) sendCommand('assistant-alert', { kind: 'phone', question, text }); },
     checkPin: (pin) => Boolean(phoneSettings().pin) && /^\d{4,8}$/.test(pin) && pinHash(pin) === phoneSettings().pin, idleSeconds: () => powerMonitor.getSystemIdleTime(),
     transcribe: async (wav) => {
@@ -1070,6 +1073,26 @@ function startPhone() {
   });
   if (!notifiers.includes(phoneNotify)) notifiers.push(phoneNotify);
   telegram.start();
+  if (getTelegramToken()) telegram.setCommands(PHONE_COMMANDS).catch(() => {}); // the / menu in your chat
+}
+const getTelegramToken = () => setup.openKeys(config.load().apiKeys).telegram || '';
+const PHONE_COMMANDS = [
+  ['status', 'ดูสถานะคอม'], ['help', 'ดูวิธีใช้'], ['new', 'เริ่มเรื่องใหม่ (หรือ /new claude โปรเจกต์ เริ่ม Agent สด)'],
+  ['agents', 'ดู Agent สดที่เปิดอยู่'], ['code', 'เปิด Agent สดของโปรเจกต์ที่เลือก'], ['projects', 'รายชื่อโปรเจกต์'],
+  ['interrupt', 'หยุดงานรอบนี้ของ Agent'], ['end', 'ปิด session ของ Agent'], ['chat', 'กลับมาคุยปกติ'], ['diff', 'ดูสิ่งที่ Agent แก้'],
+  ['screen', 'ดูหน้าจอคอม (ใส่ PIN)'], ['pc', 'สั่งงานคอม (ใส่ PIN)'], ['pcstop', 'หยุดงานบนคอม'],
+  ['say', 'ให้ตัวละครพูดข้อความบนคอม'], ['music', 'ควบคุมเพลง play pause next prev'], ['hide', 'ซ่อนตัวละครบนคอม'], ['show', 'เรียกตัวละครกลับ'],
+].map(([command, description]) => ({ command, description }));
+// what /status tells your phone
+function phoneStatus() {
+  const cfg = config.load(), sessions = agents?.list() || [], song = playingInfo;
+  return [
+    `🖥 คอมเปิดอยู่ · ไม่ได้แตะมา ${Math.round(powerMonitor.getSystemIdleTime() / 60)} นาที`,
+    song?.title ? `🎵 ${song.status === 'paused' ? '⏸' : '▶'} ${song.title}${song.artist ? ` — ${song.artist}` : ''}` : '🎵 ไม่มีเพลงที่เล่นอยู่',
+    computer?.busy ? '🤖 กำลังทำงานควบคุมเครื่อง' : null,
+    sessions.length ? `🧠 Agent สด: ${sessions.map((s) => `${s.agent}·${s.title}·${s.status}`).join(', ')}` : '🧠 ไม่มี Agent สดเปิดอยู่',
+    `👻 ${cfg.ghost ? 'ตัวละครซ่อนอยู่ (ทำงานเบื้องหลัง)' : 'ตัวละครแสดงอยู่'}${cfg.lockPos ? ' · ล็อกตำแหน่ง' : ''} · v${app.getVersion()}`,
+  ].filter(Boolean).join('\n');
 }
 const phoneNotify = (alert) => phone?.notify(alert);
 // LINE (Messaging API push): her alerts as text, when a channel token and your user ID are set

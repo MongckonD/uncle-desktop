@@ -9,7 +9,8 @@ const HELP = `คุยกับฉันได้เลย:
 • ส่งข้อความเสียง — ฉันฟังภาษาไทยได้
 • ส่งรูป — "อ่านใบเสร็จนี้", "นี่คืออะไร"
 • ส่งวิดีโอสั้น — ฉันดูภาพและฟังเสียงในคลิป
-/new เริ่มเรื่องใหม่ · /help ดูวิธีใช้ · /hide ซ่อนตัวละครบนคอม (ยังทำงานอยู่) · /show เรียกกลับ
+• ส่งไฟล์ข้อความ (txt md csv json โค้ด) — ฉันอ่านแล้วสรุปให้
+/new เริ่มเรื่องใหม่ · /help ดูวิธีใช้ · /status ดูสถานะคอม · /hide ซ่อนตัวละครบนคอม (ยังทำงานอยู่) · /show เรียกกลับ
 
 💻 Vibecode (สั่ง Claude Code / Codex บนคอม):
 /projects รายชื่อโปรเจกต์ · /create ชื่อ [codex] สร้างใหม่ · /project ชื่อ เลือก
@@ -17,14 +18,19 @@ const HELP = `คุยกับฉันได้เลย:
 /diff ดูสิ่งที่แก้ · /commit ข้อความ · /interrupt หยุด · /shot url ดูหน้าเว็บ
 /pr PIN เปิด pull request · /undo PIN ย้อน commit ล่าสุด
 
+🔊 เปิดได้ในตั้งค่า Telegram (สวิตช์สั่งงานคอม): /say ข้อความ ให้ตัวละครพูดบนคอม · /music play|pause|next|prev|volup|voldown|mute
+
 🖥 คอม (เปิดได้ในตั้งค่า Telegram ต้องใส่ PIN):
 /screen PIN ดูหน้าจอ · /pc PIN งาน สั่งงานคอม (หรือ /pc PIN แล้วส่งเสียงบอกงาน)
 /tell ข้อความ บอกเพิ่มระหว่างทำ · /pcstop หยุดงานบนคอม · /lock /sleep /shutdown /restart PIN`;
 
+const TEXT_EXT = new Set(['txt', 'md', 'csv', 'json', 'log', 'js', 'ts', 'py', 'html', 'css', 'xml', 'yaml', 'yml', 'toml', 'ini', 'sql', 'sh']);
+const FILE_CHARS = 30000;
+
 // coding: her Vibecode (vibe.js, plus shot(url)); checkPin(pin) for the risky ones (PR, undo)
 // remote: { screen() -> png, pc(task) -> text, answer({ jobId, approvalId, yes, text }), tell(text), stop(), power(action) -> text }
 // for the switches screen, control, power
-function createPhone({ telegram, settings, answer, transcribe, speak, media, coding = null, remote = null, checkPin = () => false, setProject = () => {}, setGhost = () => {}, hub = null, idleSeconds = () => 0, onReply = null, log = () => {} }) {
+function createPhone({ telegram, settings, answer, transcribe, speak, media, coding = null, remote = null, checkPin = () => false, setProject = () => {}, setGhost = () => {}, hub = null, status = async () => '', player = async () => {}, say = () => {}, idleSeconds = () => 0, onReply = null, log = () => {} }) {
   const history = []; // the last turns with your phone, for follow-ups
   const asks = new Map(); // a tool waiting for your tap: id -> resolve
   const remember = (role, content) => { history.push({ role, content }); while (history.length > 12) history.shift(); };
@@ -126,6 +132,22 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
     return telegram.send(chatId, await remote.power(cmd.slice(1)));
   }
 
+  // the computer's speakers from your phone, behind the computer switch (no PIN: it only talks and presses media keys)
+  const MUSIC = { play: 'play', pause: 'pause', next: 'next', prev: 'previous', previous: 'previous', volup: 'volup', voldown: 'voldown', mute: 'mute' };
+  async function computerSpeakers(chatId, text) {
+    if (!settings().switches.control) return telegram.send(chatId, 'คำสั่งนี้ปิดอยู่ เปิดได้ที่ ตั้งค่า › Telegram บนคอม (สั่งงานคอม)');
+    const [cmd, ...rest] = text.split(/\s+/), arg = rest.join(' ').trim();
+    if (cmd === '/say') {
+      if (!arg) return telegram.send(chatId, 'ใช้แบบนี้: /say ข้อความที่จะให้พูดบนคอม');
+      say(arg.slice(0, 300));
+      return telegram.send(chatId, '🔊 ส่งให้ตัวละครพูดบนคอมแล้ว');
+    }
+    const action = MUSIC[arg.toLowerCase()];
+    if (!action) return telegram.send(chatId, 'ใช้แบบนี้: /music play | pause | next | prev | volup | voldown | mute');
+    await player(action);
+    return telegram.send(chatId, `🎵 ${action}`);
+  }
+
   async function onMessage(m) {
     const { chatId } = m;
     try {
@@ -146,6 +168,8 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
         if (/^\/(start|help)\b/.test(m.text)) return telegram.send(chatId, hub ? `${HELP}\n\n${hub.HELP}` : HELP);
         if (hub && (await hub.command(chatId, m.text))) return undefined;
         if (/^\/new\b/.test(m.text)) { history.length = 0; return telegram.send(chatId, 'เริ่มเรื่องใหม่แล้ว'); }
+        if (/^\/status\b/.test(m.text)) return telegram.send(chatId, await status());
+        if (/^\/(say|music)\b/.test(m.text)) return await computerSpeakers(chatId, m.text);
         if (/^\/(show|hide)\b/.test(m.text)) { setGhost(m.text.startsWith('/hide')); return telegram.send(chatId, m.text.startsWith('/hide') ? 'ซ่อนตัวละครบนคอมแล้ว ยังทำงานอยู่' : 'ตัวละครกลับมาบนคอมแล้ว'); }
         if (remote && /^\/(screen|pc|pcstop|tell|lock|sleep|shutdown|restart)\b/.test(m.text)) return await remoteCommand(chatId, m.text);
         if (remote && pcAsk?.answerNeeded && !m.text.startsWith('/')) return await pcAnswer(chatId, true, m.text);
@@ -170,6 +194,16 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
         }
         const image = (await telegram.download(m.fileId)).toString('base64');
         return await reply(chatId, m.caption || 'ดูรูปนี้แล้วบอกหน่อยว่าเป็นอะไร มีอะไรน่าสนใจ', { images: [image] });
+      }
+      if (m.kind === 'file') { // a text file: read out and asked about (a PDF or other binary: not yet)
+        const ext = (m.name.match(/\.(\w{1,8})$/) || [])[1]?.toLowerCase() || '';
+        if (!(m.mime.startsWith('text/') || TEXT_EXT.has(ext) || /json|xml|yaml|javascript/.test(m.mime))) return telegram.send(chatId, `อ่านไฟล์ .${ext || '?'} ไม่ได้ (PDF และไฟล์ไบนารียังไม่รองรับ) · ส่งไฟล์ข้อความได้ เช่น ${[...TEXT_EXT].slice(0, 8).join(' ')}`);
+        if (m.size > 2 * 1024 * 1024) return telegram.send(chatId, 'ไฟล์ใหญ่เกิน 2 MB ลองส่งเฉพาะส่วนที่ต้องการ');
+        await telegram.typing(chatId);
+        const bytes = await telegram.download(m.fileId);
+        if (bytes.includes(0)) return telegram.send(chatId, 'ไฟล์นี้ไม่ใช่ข้อความ อ่านไม่ได้');
+        const body = bytes.toString('utf8'), cut = body.length > FILE_CHARS;
+        return await reply(chatId, `${m.caption || 'สรุปไฟล์นี้ให้หน่อย'}\n\n--- ${m.name}${cut ? ` (ตัดเหลือ ${FILE_CHARS} ตัวอักษรแรก)` : ''} ---\n${body.slice(0, FILE_CHARS)}`);
       }
       if (m.kind === 'video') {
         if (m.size > 20 * 1024 * 1024) return telegram.send(chatId, 'คลิปใหญ่เกิน 20 MB Telegram ไม่ให้ bot ดาวน์โหลด ลองส่งคลิปสั้นลง');
