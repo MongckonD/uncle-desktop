@@ -1047,7 +1047,7 @@ function startPhone() {
     saveState: (name, state) => { const v = config.load().vibe || {}; updateConfig({ vibe: { ...v, projects: { ...v.projects, [name]: state } } }); },
   });
   const coding = { ...vibe, shot: shotPage };
-  agents ||= createAgents({ modelFor: (agent) => config.load().vibe?.models?.[agent] || null, onEvent: (e) => { agentPhone?.onEvent(e); if (agentsWin && !agentsWin.isDestroyed()) agentsWin.webContents.send('agents:event', e); }, log: (line) => console.log(line) });
+  agents ||= createAgents({ modelFor: (agent) => config.load().vibe?.models?.[agent] || null, onEvent: (e) => { agentPhone?.onEvent(e).catch(err => console.log(`[agent-phone] ${err.message}`)); if (agentsWin && !agentsWin.isDestroyed()) agentsWin.webContents.send('agents:event', e); }, log: (line) => console.log(line) });
   agentPhone = createAgentPhone({
     telegram, agents, settings: phoneSettings,
     projectDir: agentProject, getResume: agentResume,

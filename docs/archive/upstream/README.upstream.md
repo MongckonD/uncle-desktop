@@ -1,3 +1,5 @@
+> Historical documentation from the original Capri project. For current Uncle Desktop documentation, see [the documentation index](../../README.md).
+
 **English** · [Français](README.fr.md)
 
 # Capri
@@ -6,9 +8,9 @@ Capri, the *Project Capricorn* construct from Cyberpunk: Edgerunners season 2, l
 and tells you what your coding AI is up to: **Claude Code**, **Codex** or **Antigravity**. She teleports,
 glitches, comments on every action, comes to find you when it needs your permission, and loses it when the job is done.
 
-![Capri telling you Claude is done](docs/done.png)
+![Capri telling you Claude is done](../../images/done.png)
 
-![Teleport, frame by frame](docs/teleport.png)
+![Teleport, frame by frame](../../images/teleport.png)
 
 ## What she does
 
@@ -19,7 +21,7 @@ glitches, comments on every action, comes to find you when it needs your permiss
   again, glances at where she's going, and lets go: her arms break into shards from her hands in, and her head
   crouches and dives down to her spot, where her body unfolds from her face.
 
-  ![Her intro: her hands on the edges, her face hitting the glass, the wave, holding on again](docs/intro.png)
+  ![Her intro: her hands on the edges, her face hitting the glass, the wave, holding on again](../../images/intro.png)
 
 - **While Claude works**: a ticker over her head shows the current action
   (`EDITS gigs.ts`, `RUNS npm test`, `GREPS "paginate"`…) and she sheds little data glyphs.
@@ -50,9 +52,9 @@ glitches, comments on every action, comes to find you when it needs your permiss
   The white specks of her mane lift off as a constellation, line up into a road from her fingers to the satellite,
   she coils up, and the red light goes up to it. It answers her, twinkling twice.
 
-![Victory: the key pose, then the laugh and the cut-in](docs/victory.png)
+![Victory: the key pose, then the laugh and the cut-in](../../images/victory.png)
 
-![The satellite: her stars, the road, the red light, the answer](docs/star.png)
+![The satellite: her stars, the road, the red light, the answer](../../images/star.png)
 
 ### She gets around
 
@@ -91,13 +93,13 @@ glitches, comments on every action, comes to find you when it needs your permiss
 - **Little flourishes**: a full spin with afterimages, a hop, looking left and right, the cocked head,
   and the other minds in her (her green and red copies) pulling away from her, hanging there, and snapping back in.
 
-![Sitting on a window](docs/sit.png)
+![Sitting on a window](../../images/sit.png)
 
-![Peeking in from the edges](docs/peek.png)
+![Peeking in from the edges](../../images/peek.png)
 
-![Possessing a window: the dive, the hit, the window full of eyes](docs/possess.png)
+![Possessing a window: the dive, the hit, the window full of eyes](../../images/possess.png)
 
-![Asleep down to her mask, waking up, and put away bottom left](docs/sleep.png)
+![Asleep down to her mask, waking up, and put away bottom left](../../images/sleep.png)
 
 Window tracking is Windows-only for now (a tiny PowerShell helper reads window positions, never their contents; the title of the one in front is only used to spot another AI, see "She gets attached", and its program's folder to tell a game; the USB sticks plugged in are seen by their drive letter, other devices by the name Windows gives them).
 On macOS and Linux she still floats, peeks, falls and wanders.
@@ -110,7 +112,7 @@ off her fingertip, a reticle slams onto it with two of her eyes opening on its c
 in. Then she holds it while she explains, a wire of data running from her finger to it: now and then she jabs at it,
 or glances back at you. When she's done, the wire reels back into her finger and the arm snaps back.
 
-![The strike, and the hold while she explains](docs/point.png)
+![The strike, and the hold while she explains](../../images/point.png)
 
 - **Where's my icon?** She goes down by the clock and points at her tray icon, or at the **^** when Windows hides it.
 - **Where's Claude?** She points at Claude's window: the one you typed your last prompt in.
@@ -125,9 +127,9 @@ She pulls faces while she talks: eight expressions, all frames of her from the s
 grin, eyes gone round, looking right at you, laughing with her mouth wide open, all her eyes at once, the zigzag grin).
 Each message picks the one that fits, and her portrait glitches from one face to the next.
 
-![Pointing at Claude's window during a permission prompt, and at her tray icon](docs/guide.png)
+![Pointing at Claude's window during a permission prompt, and at her tray icon](../../images/guide.png)
 
-![Her eight faces](docs/faces.png)
+![Her eight faces](../../images/faces.png)
 
 ### Her mission report
 
@@ -513,7 +515,7 @@ This is a non-commercial fan project with no affiliation. The character images i
 the show, a fan-made cut-out and fan art (her intro's close-ups); they are **not** covered by the code's license.
 If a rights holder wants them removed, open an issue.
 
-**License: free, never for sale.** The code is under the [PolyForm Noncommercial License 1.0.0](LICENSE): you can use
+**License: free, never for sale.** The code is under the [PolyForm Noncommercial License 1.0.0](../../../LICENSE): you can use
 her, change her and share what you made, for free. Selling Capri, or anything made from her code (keys, subscriptions,
 paid access, paid orders), is not allowed. Versions up to 0.4.3 were under the MIT License.
 

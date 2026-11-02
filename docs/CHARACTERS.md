@@ -1,14 +1,15 @@
 # เลือกตัวละคร
 
+ตรวจเทียบ source 0.23.10 วันที่ 1 พฤศจิกายน 2026; ผลทดสอบกับบริการ/เครื่องจริงแยกจากการตรวจเอกสารครั้งนี้
 เพิ่มภาพตัวละครของคุณเองได้จากปุ่ม **＋ เพิ่มตัวละครของฉัน** ในหน้าเลือกตัวละคร มี PNG ตัวอย่างให้บันทึกและพรอมป์ต์ AI พร้อมคัดลอก ดู [คู่มือเพิ่มตัวละคร](ADD_YOUR_CHARACTER.md)
 
 คลิกขวาที่ตัวละครหรือไอคอนถาดระบบ → **เลือกตัวละคร…** เพื่อเปิดหน้าภาพตัวอย่างเต็มตัว กดการ์ดเพื่อดูตัวที่เลือก แล้วกด **ใช้ตัวละครนี้** จึงจะเปลี่ยนจริง เลื่อนดูรายชื่อได้ โดยหัวข้อและปุ่มยืนยันยังอยู่ให้กด ปิดได้ด้วยปุ่ม ✕, Esc หรือคลิกพื้นหลัง เมนูเปลี่ยนด่วนยังมีให้ใช้งานด้วย
 
-มีให้เลือก 13 ตัว: Capri, UncleDev, Blacky, Bald Man, Lazy Boy, Angry Guy, Drunk Uncle, Vulture, Chubby Girl, Cute Girl, Fatty Girl, **Pinky** (Blacky เวอร์ชันเสือชมพู) และ **Mira** (ตัวละคร AI สมจริงครึ่งตัว ผมบ๊อบ เสื้อขาว)
+รายชื่อที่ติดมากับ source รุ่นนี้มี 19 ตัว: UncleDev, Blacky, Bald Man, Lazy Boy, Angry Guy, Drunk Uncle, Vulture, Chubby Girl, Cute Girl, Fatty Girl, Pinky, Mira, Mochi, Lili, Luna, Pudding, Tama, Capri, Peegee ดูรายชื่อและชุดภาพที่ใช้งานจริงจาก `assets/characters/catalog.json`
 
-Mira สร้างจากภาพอ้างอิง AI ของผู้ใช้ มี 24 เฟรม / 6 สถานะ ใช้ 2 fps และท่าทางเบา ๆ แทนท่าทางการ์ตูน มีภาพตัวอย่างและบุคลิกแชตของตัวเอง เป็น sprite ภาพนิ่งสลับเฟรม ยังไม่ใช่วิดีโอหรือลิปซิงก์ ดูพรอมป์ต์ใน `docs/mira-generation.json`
+ภาพชุดเริ่มต้นของ Mira สร้างจากภาพอ้างอิง AI ของผู้ใช้ มี 24 เฟรม / 6 สถานะ ใช้ 2 fps และท่าทางเบา ๆ แทนท่าทางการ์ตูน มีภาพตัวอย่างและบุคลิกแชตของตัวเอง เป็น sprite ภาพนิ่งสลับเฟรม ยังไม่ใช่วิดีโอหรือลิปซิงก์ ดูพรอมป์ต์ใน `docs/provenance/mira-generation.json`
 
-Pinky ปรับเป็นชมพูพาสเทลอ่อนตามภาพสีอ้างอิง ไม่มีน้ำตาหรือจุดฟ้าใต้ตาในทั้ง 24 เฟรม รวมภาพตัวอย่างและภาพแชต ดูพรอมป์ต์แก้ไขใน `docs/pinky-pastel-edit.json`
+ภาพชุดเริ่มต้นของ Pinky ปรับเป็นชมพูพาสเทลอ่อนตามภาพสีอ้างอิง ไม่มีน้ำตาหรือจุดฟ้าใต้ตาในทั้ง 24 เฟรม รวมภาพตัวอย่างและภาพแชต ดูพรอมป์ต์แก้ไขใน `docs/provenance/pinky-pastel-edit.json`
 
 Capri ใช้ตัววาดภาพ WebGL และท่าทางต้นฉบับ โดยแสดงร่วมกับตัวละครใหม่ผ่าน Canvas เดียวกัน แอปจำตัวที่เลือกเมื่อเปิดใหม่ การเปลี่ยนตัวไม่รีโหลดหน้า ไม่ย้ายตำแหน่ง ไม่เปลี่ยนขนาด และไม่ล้างเซสชันงานของ Coding Agent
 
@@ -27,9 +28,13 @@ Capri ใช้ตัววาดภาพ WebGL และท่าทางต�
 | ผิดพลาด | งานล้มเหลว |
 | นอน | พักเมื่อไม่ได้ใช้งาน |
 
-แต่ละตัวมี 24 เฟรม แบ่ง 6 สถานะ สถานะละ 4 เฟรม ภาพพื้นหลังโปร่งใส จัดเท้าไว้บน anchor เดียวกัน ใช้ Canvas 2D แทน shader ที่ผูกกับรูปร่าง Capri และตรวจการคลิกจาก alpha ของเฟรมที่กำลังแสดง โหมดลดการเคลื่อนไหวใช้ภาพแรกของแต่ละสถานะ
+จำนวนเฟรมและความละเอียดขึ้นกับชุดภาพของแต่ละตัว ชุด legacy หลายตัวมี 24 เฟรม; Mochi มี sequence 30 เฟรมแยกเต็มตัว/ครึ่งตัว ส่วนชุดใหม่มี manifest และ atlas หลายหน้า ตัววาดใช้ logical coordinates 320×420 และเลือกความละเอียดตาม scale, DPI, GPU และ memory limits ตรวจการคลิกจาก alpha และรองรับโหมดลดการเคลื่อนไหว
 
-ชุดนี้ยังไม่มีท่าเดินและท่านั่งเฉพาะตัว ใช้ท่าตามสถานะร่วมกับระบบย้ายตำแหน่ง/เกาะหน้าต่างเดิม รุ่น 0.5.0 มีเสียงพูด Windows/OpenAI แยกจากเสียงเอฟเฟกต์แล้ว ดู [คู่มือเสียง](SPEECH_TH.md) แต่ยังไม่มีการขยับปากตามคำพูด
+ท่าเดิน/นั่งและชิ้นส่วนแยกไม่ได้มีครบทุกตัว ใช้ภาพท่าตามสถานะร่วมกับระบบเคลื่อนที่เดิม เสียงตอบขับการเปลี่ยนท่าหรือการเคลื่อนไหวของตัวละครที่รองรับตามระดับเสียง ไม่ใช่ phoneme lip sync หรือโมเดล 3D จริง ดู [คู่มือเสียง](SPEECH_TH.md) และ [pipeline ภาพ](character-sprites.md)
+
+ตัวละครใหม่ Mochi, Lili, Luna, Pudding, Tama และ Peegee มี assets ระดับ 640×840; pipeline รองรับ 960×1260 แต่ไม่ใช่ทุกตัวมีภาพระดับนั้น หากโหลด manifest ล้มเหลวจะใช้ legacy atlas ซึ่งอาจดูเบลอเมื่อขยาย Peegee ไม่มี bust manifest แยกใน catalog ปัจจุบัน จึงใช้ crop จากชุดเต็มตัว
+
+การเต้นอัตโนมัติต้องเปิดมินิเพลเยอร์/เต้นตามเพลง และเครื่องเล่นต้องประกาศ media session ของระบบ ไม่ได้ฟังไมค์เพื่อจับจังหวะเพลง
 
 ## ไฟล์
 
@@ -38,7 +43,7 @@ Capri ใช้ตัววาดภาพ WebGL และท่าทางต�
 - `portrait.png`, `thinking.png`, `attention.png`, `success.png`, `error.png`, `sleep.png` — ภาพกล่องข้อความ
 - `preview.jpg` ในแต่ละโฟลเดอร์ — ดูชุดเฟรมทั้งหมด
 - `tools/normalize-characters.py --character ID RAW.png` — แยกภาพ สเกลร่วม และจัด anchor; ต้องมี Pillow, NumPy และ SciPy
-- `docs/character-generation.json` — ภาพอ้างอิงและพรอมป์ต์ของชุดเพิ่ม 9 ตัว สร้างด้วย built-in ImageGen
+- `docs/provenance/character-generation.json` — ภาพอ้างอิงและพรอมป์ต์ของชุดเพิ่ม 9 ตัว สร้างด้วย built-in ImageGen
 
 ## Prompt set / provenance
 
@@ -53,9 +58,6 @@ UncleDev identity: oversized inverted triangular peach head, black bowl-cut bang
 
 Blacky identity: black inverted triangular cat head, two triangular ears, black bangs, golden eyes, two blue cheek spots, white nose, pink tongue, ragged black tunic, thin black limbs, black shoes and a curved tail. Final corrective edit: remove extra spherical nodules mistaken for head anatomy; exactly two arms and two paws, attached continuously to the shoulders, in all 24 figures.
 
-## ตรวจสอบ
+## ตรวจสอบสำหรับนักพัฒนา
 
-- `npm test` — ผ่าน 13/13 ข้อ รวมคำแปล ตัวแปร ชื่อไทย สถานะ animation และบุคลิกของตัวละคร
-- เปิดแอปด้วย `npm run dev` แล้วรัน `npm run test:characters:live` — ตรวจภาพตัวอย่างครบทุกตัว ภาพไม่ล้น การเลือกก่อนยืนยัน ปิดด้วย Esc การสลับโดยไม่เปลี่ยน instance/เซสชัน/ตำแหน่ง ตรวจการลาก ส่วนโปร่งใส และการแสดงผลทั้ง 6 สถานะของทุกตัว
-- ภาพทดสอบอยู่ใน `captures/angry-boy-*.png` และ `captures/blacky-*.png` (ไม่รวมใน Git)
-- ไม่ได้ทดสอบแพ็ก installer หรือ benchmark CPU/RAM ในงานนี้
+ใช้ `npm test` และชุด character/pipeline tests; วิธี rebuild และ smoke tests อยู่ใน [pipeline ภาพ](character-sprites.md) ผล QA เดิมย้ายไป [บันทึกประวัติ](archive/QA_HISTORY_TH.md) ไม่ใช่การยืนยันภาพใน installed app รุ่นปัจจุบัน

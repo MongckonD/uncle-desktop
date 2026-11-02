@@ -31,22 +31,23 @@ function show(e) {
   if (e.type === 'text') log.append(el('li', 'text', e.text));
   else if (e.type === 'user') log.append(el('li', 'user', e.text));
   else if (e.type === 'tool') log.append(el('li', 'tool', `🔧 ${e.label}`));
-  else if (e.type === 'turn') log.append(el('li', `turn ${e.status}`, e.status === 'error' ? `⚠️ ${e.text || 'ทำไม่สำเร็จ'}` : '— จบรอบ —'));
+  else if (e.type === 'turn') log.append(el('li', `turn ${e.status}`, e.status === 'interrupted' ? '— หยุดโดยผู้ใช้ —' : e.status === 'error' ? `⚠️ ${e.text || 'ทำไม่สำเร็จ'}` : '— จบรอบ —'));
   else if (e.type === 'ask') {
     const card = el('li', 'ask');
     card.append(el('div', 'q', `${e.kind === 'question' ? '❓' : '🔐'} ${e.title}`));
     const row = el('div', 'row');
-    const reply = (decision, text = '') => run(() => host.answer(current, e.askId, decision, text))();
+    const sessionId = current;
+    const reply = (decision, text = '') => run(() => host.answer(sessionId, e.askId, decision, text))();
     if (e.kind === 'question') {
       for (const o of e.options || []) { const b = el('button', '', o); b.onclick = () => reply('allow', o); row.append(b); }
       row.append(el('span', 'hint', 'หรือพิมพ์ตอบในช่องด้านล่าง'));
     } else {
-      for (const [d, t] of [['allow', '✓ อนุญาต'], ['always', '✓ ตลอด session'], ['deny', '✗ ไม่อนุญาต']]) { const b = el('button', d, t); b.onclick = () => reply(d); row.append(b); }
+      for (const [d, t] of [['allow', '✓ อนุญาต'], ...(e.allowSession === false ? [] : [['always', '✓ ตลอด session']]), ['deny', '✗ ไม่อนุญาต']]) { const b = el('button', d, t); b.onclick = () => reply(d); row.append(b); }
     }
     card.append(row); log.append(card); pending.set(e.askId, card);
   } else if (e.type === 'answered') {
     const card = pending.get(e.askId);
-    if (card) { card.querySelector('.row').replaceChildren(el('span', 'done', `→ ${e.decision === 'deny' ? 'ไม่อนุญาต' : e.text || (e.decision === 'always' ? 'อนุญาตตลอด session' : 'อนุญาตแล้ว')}`)); pending.delete(e.askId); }
+    if (card) { card.querySelector('.row').replaceChildren(el('span', 'done', `→ ${e.expired ? 'คำถามหมดอายุแล้ว' : e.decision === 'deny' ? 'ไม่อนุญาต' : e.text || (e.decision === 'always' ? 'อนุญาตตลอด session' : 'อนุญาตแล้ว')}`)); pending.delete(e.askId); }
   } else return;
   log.scrollTop = log.scrollHeight;
 }

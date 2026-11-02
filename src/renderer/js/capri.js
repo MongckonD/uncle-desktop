@@ -879,6 +879,18 @@ export class Capri {
     return true;
   }
 
+  // Flat-colour impact frames, one drawing each.
+  async flash(colors) {
+    const p = this.p;
+    for (const color of colors) {
+      p.sil = color;
+      p.silAmount = 1;
+      this.drawFrame();
+      await sleep(ON_ONES);
+    }
+    p.silAmount = 0;
+  }
+
   // Effects and sounds pinned to drawings of an act (the third item of a key in acting.js).
   onCue(cue) {
     const s = this.scale;

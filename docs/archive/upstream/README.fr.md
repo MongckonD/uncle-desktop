@@ -1,4 +1,6 @@
-[English](README.md) · **Français**
+> Document historique de Capri (projet d’origine), pas une traduction à jour d’Uncle Desktop. Voir [la documentation actuelle](../../README.md).
+
+[English](../../../README.md) · **Français**
 
 # Capri
 
@@ -6,9 +8,9 @@ Capri, le construct du *Project Capricorn* (Cyberpunk: Edgerunners, saison 2), v
 et te raconte ce que fait ton IA de code, **Claude Code**, **Codex** ou **Antigravity** : elle se téléporte,
 glitche, commente chaque action, vient te chercher quand elle attend ta permission et part en vrille quand la tâche est finie.
 
-![Capri annonce que Claude a terminé](docs/done.png)
+![Capri annonce que Claude a terminé](../../images/done.png)
 
-![Téléportation, image par image](docs/teleport.png)
+![Téléportation, image par image](../../images/teleport.png)
 
 ## Ce qu'elle fait
 
@@ -20,7 +22,7 @@ glitche, commente chaque action, vient te chercher quand elle attend ta permissi
   brisent en éclats depuis les mains, et sa tête prend son élan et plonge jusqu'à sa place, où son corps se déplie
   depuis son visage.
 
-  ![Son intro : ses mains sur les bords, son visage contre la vitre, le coucou, elle se ragrippe](docs/intro.png)
+  ![Son intro : ses mains sur les bords, son visage contre la vitre, le coucou, elle se ragrippe](../../images/intro.png)
 
 - **Pendant que Claude bosse** : un ticker au-dessus d'elle affiche l'action en cours
   (`MODIFIE gigs.ts`, `EXÉCUTE npm test`, `CHERCHE "paginate"`…) et elle lâche des petits glyphes de données.
@@ -53,9 +55,9 @@ glitche, commente chaque action, vient te chercher quand elle attend ta permissi
   Les points blancs de sa crinière s'envolent en constellation, s'alignent en chemin entre ses doigts et le satellite,
   elle se ramasse, et la lumière rouge monte jusqu'à lui. Il lui répond en scintillant deux fois.
 
-![Victoire : la pose clé, puis le rire et le cut-in](docs/victory.png)
+![Victoire : la pose clé, puis le rire et le cut-in](../../images/victory.png)
 
-![Le satellite : ses étoiles, le chemin, la lumière rouge, la réponse](docs/star.png)
+![Le satellite : ses étoiles, le chemin, la lumière rouge, la réponse](../../images/star.png)
 
 ### Elle bouge partout
 
@@ -96,13 +98,13 @@ glitche, commente chaque action, vient te chercher quand elle attend ta permissi
 - **Petites fioritures** : un tour complet avec des images rémanentes, un saut, un regard à gauche puis à droite, la tête penchée,
   et ses autres esprits (ses copies verte et rouge) qui se détachent d'elle, flottent un instant et reviennent d'un coup.
 
-![Assise sur une fenêtre](docs/sit.png)
+![Assise sur une fenêtre](../../images/sit.png)
 
-![Elle dépasse des bords de l'écran](docs/peek.png)
+![Elle dépasse des bords de l'écran](../../images/peek.png)
 
-![Elle possède une fenêtre : la plongée, l'impact, la fenêtre pleine d'yeux](docs/possess.png)
+![Elle possède une fenêtre : la plongée, l'impact, la fenêtre pleine d'yeux](../../images/possess.png)
 
-![Elle s'endort jusqu'à son masque, se réveille, et rangée en bas à gauche](docs/sleep.png)
+![Elle s'endort jusqu'à son masque, se réveille, et rangée en bas à gauche](../../images/sleep.png)
 
 Le suivi des fenêtres ne marche que sous Windows pour l'instant (un petit script PowerShell lit la position des fenêtres, jamais leur contenu ; le titre de celle qui est devant sert seulement à repérer une autre IA, voir « Elle s'attache à toi », et le dossier de son programme à reconnaître un jeu ; les clés USB branchées ne sont vues que par leur lettre, les autres appareils par le nom que Windows leur donne).
 Sur macOS et Linux, elle flotte, dépasse des bords, tombe et se balade quand même.
@@ -116,7 +118,7 @@ s'ouvrent sur ses coins, et un gros plan sur ses yeux surgit. Ensuite elle tient
 un fil de données entre son doigt et la cible : de temps en temps elle donne un petit coup de doigt, ou te jette un
 regard. Quand elle a fini, le fil se ravale dans son doigt et le bras revient d'un coup sec.
 
-![La frappe, puis la pose tenue pendant qu'elle explique](docs/point.png)
+![La frappe, puis la pose tenue pendant qu'elle explique](../../images/point.png)
 
 - **Où est mon icône ?** Elle descend près de l'horloge et pointe son icône, ou le **^** quand Windows la cache.
 - **Où est Claude ?** Elle pointe la fenêtre de Claude : celle où tu as tapé ton dernier prompt.
@@ -132,9 +134,9 @@ détourne la tête, le sourire avec le croc, les yeux tout ronds, elle te regard
 grande ouverte, tous ses yeux à la fois, le sourire en zigzag). Chaque message prend celle qui va avec, et son portrait
 glitche d'une expression à l'autre.
 
-![Elle pointe la fenêtre de Claude pendant une demande de permission, puis son icône](docs/guide.png)
+![Elle pointe la fenêtre de Claude pendant une demande de permission, puis son icône](../../images/guide.png)
 
-![Ses huit expressions](docs/faces.png)
+![Ses huit expressions](../../images/faces.png)
 
 ### Son rapport de mission
 
@@ -538,7 +540,7 @@ Projet de fan, non commercial, sans lien avec eux. Les images du personnage dans
 d'une découpe faite par des fans et d'un fan art (les gros plans de son intro) ; elles ne sont **pas** couvertes par la licence du code.
 Si un ayant droit veut qu'elles soient retirées, ouvre une issue.
 
-**Licence : gratuit, jamais à vendre.** Le code est sous [PolyForm Noncommercial License 1.0.0](LICENSE) : tu peux
+**Licence : gratuit, jamais à vendre.** Le code est sous [PolyForm Noncommercial License 1.0.0](../../../LICENSE) : tu peux
 l'utiliser, la modifier et partager ce que tu as fait, gratuitement. Vendre Capri, ou quoi que ce soit fait à partir de
 son code (clés, abonnements, accès payant, commandes payantes), est interdit. Les versions jusqu'à la 0.4.3 étaient sous licence MIT.
 

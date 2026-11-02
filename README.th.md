@@ -4,7 +4,7 @@
 
 **เพื่อน AI ตัวเล็กบนหน้าจอ ที่คุยภาษาไทยได้ ทำงานแทนคุณได้ และคอยดู Coding AI ให้**
 
-**ภาษาไทย** · [English](README.md) · [Français](README.fr.md) · [คู่มือต้นฉบับ Capri](README.upstream.md)
+**ภาษาไทย** · [English](README.md) · [Français (ต้นทาง Capri)](docs/archive/upstream/README.fr.md) · [คู่มือต้นฉบับ Capri](docs/archive/upstream/README.upstream.md)
 
 [![Release](https://img.shields.io/github/v/release/pk115/uncle-desktop?label=ดาวน์โหลด)](https://github.com/pk115/uncle-desktop/releases/latest)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4)
@@ -37,7 +37,7 @@
 <details>
 <summary>ภาพหน้าจอแอป</summary>
 
-<img src="docs/done.png" alt="Uncle Desktop บนหน้าจอ" width="560">
+<img src="docs/images/done.png" alt="Uncle Desktop บนหน้าจอ" width="560">
 
 </details>
 
@@ -83,7 +83,7 @@
 
 ### 🎭 ตัวละคร
 
-มีให้เลือก 17 ตัว เลือกจากหน้าตั้งค่าแท็บ **ตัวละคร** ที่มีรูปตัวอย่าง หรือเปลี่ยนด่วนจากเมนูคลิกขวา
+มีให้เลือก 19 ตัว เลือกจากหน้าตั้งค่าแท็บ **ตัวละคร** ที่มีรูปตัวอย่าง หรือเปลี่ยนด่วนจากเมนูคลิกขวา
 
 | UncleDev | Blacky | Mira | Pinky | Mochi | Lili |
 | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -97,6 +97,7 @@
 - **มุมมอง:** เต็มตัว หรือครึ่งตัวให้เห็นหน้าชัด
 - **ขนาด:** ปรับได้หลายระดับ
 - **เปลี่ยนตัวด่วน:** ชี้เมาส์ที่ตัวละคร กด Ctrl ค้างแล้วหมุนลูกกลิ้ง ลง = ตัวถัดไป ขึ้น = ตัวก่อนหน้า
+- **ตัวละครเพิ่มเติมใน catalog:** Tama และ Peegee
 - **นำเข้าตัวละครเอง:** ใช้ภาพ atlas ของคุณ ดู [CHARACTERS.md](docs/CHARACTERS.md) และ [ADD_YOUR_CHARACTER.md](docs/ADD_YOUR_CHARACTER.md)
 
 ### 🏙 ใช้ชีวิตบนหน้าจอ
@@ -307,6 +308,8 @@
 - ข้อความบนหน้าจอถือเป็นข้อมูล ไม่ใช่คำสั่ง: AI ไม่ทำตามข้อความที่เขียนบนเว็บ
 
 ## สำหรับนักพัฒนา
+
+[สารบัญและผลวิเคราะห์เอกสาร](docs/README.md) · [กฎกลางสำหรับ AI Agents](AGENTS.md) · [แผนงานหลัก](docs/ROADMAP_TH.md)
 
 ต้องมี [Node.js](https://nodejs.org/) 20 ขึ้นไป
 

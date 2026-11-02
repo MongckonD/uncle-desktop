@@ -7,7 +7,7 @@ function fakeAgents() {
   const calls = [], sessions = [];
   return {
     calls, sessions,
-    start: (o) => { calls.push(['start', o.agent, o.title, o.resume]); sessions.push({ id: 's1', agent: o.agent, title: o.title, status: 'idle' }); return 's1'; },
+    start: (o) => { calls.push(['start', o.agent, o.title, o.resume]); const id = 's' + (sessions.length + 1); sessions.push({ id, agent: o.agent, title: o.title, status: 'idle' }); return id; },
     send: async (id, text) => { calls.push(['send', id, text]); },
     answer: (id, askId, v) => { calls.push(['answer', askId, v.decision, v.text || '']); return true; },
     interrupt: (id) => calls.push(['interrupt', id]),
@@ -17,7 +17,7 @@ function fakeAgents() {
 }
 function fakeTelegram() {
   const out = []; let n = 0;
-  return { out, send: async (chat, text, buttons) => { out.push({ id: ++n, text, buttons }); return { message_id: n }; }, edit: async (chat, id, text) => { out.push({ edit: id, text }); } };
+  return { out, send: async (chat, text, buttons) => { out.push({ chat, id: ++n, text, buttons }); return { message_id: n }; }, edit: async (chat, id, text) => { out.push({ chat, edit: id, text }); } };
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -84,4 +84,106 @@ test('agent phone: say() sends to the picked session (a photo\'s words may even 
   agents.sessions[0].status = 'working';
   assert.equal(hub.busy('shop'), true);
   assert.equal(hub.busy('other'), false);
+});
+
+test('agent phone: old permission buttons cannot approve after the switch is disabled', async () => {
+  const tg = fakeTelegram(), agents = fakeAgents(); let approve = true;
+  const hub = createAgentPhone({ telegram: tg, agents, settings: () => ({ chatId: 1, switches: { approve } }), projectDir: p => p });
+  await hub.command(1, '/new claude shop');
+  await hub.onEvent({ id: 's1', type: 'ask', askId: 'r', kind: 'permission', title: 'Write' });
+  const button = tg.out.at(-1).buttons[0][0].data;
+  approve = false;
+  await hub.callback(1, button);
+  assert.equal(agents.calls.some(c => c[0] === 'answer'), false);
+  assert.match(tg.out.at(-1).text, /ปิดอยู่/);
+});
+
+test('agent phone: a stale core answer never produces a successful approval message', async () => {
+  const tg = fakeTelegram(), agents = fakeAgents();
+  agents.answer = () => false;
+  const hub = createAgentPhone({ telegram: tg, agents, settings: () => ({ chatId: 1, switches: { approve: true } }), projectDir: p => p });
+  await hub.command(1, '/new claude shop');
+  await hub.onEvent({ id: 's1', type: 'ask', askId: 'r', kind: 'permission', title: 'Write' });
+  await hub.callback(1, tg.out.at(-1).buttons[0][0].data);
+  assert.match(tg.out.at(-1).text, /หมดอายุ/);
+  assert.equal(tg.out.some(o => o.edit && o.text.includes('→ อนุญาตแล้ว')), false);
+});
+
+test('agent phone: expired typed questions no longer consume the next task', async () => {
+  const tg = fakeTelegram(), agents = fakeAgents();
+  const hub = createAgentPhone({ telegram: tg, agents, settings: () => ({ chatId: 1, switches: { approve: true } }), projectDir: p => p });
+  await hub.command(1, '/new claude shop');
+  await hub.onEvent({ id: 's1', type: 'ask', askId: 'r', kind: 'question', title: 'Which?' });
+  await hub.onEvent({ id: 's1', type: 'answered', askId: 'r', decision: 'deny', expired: true });
+  assert.match(tg.out.at(-1).text, /หมดอายุ/);
+  await hub.command(1, 'new task');
+  assert.deepEqual(agents.calls.at(-1), ['send', 's1', 'new task']);
+  await hub.onEvent({ id: 's1', type: 'turn', status: 'done' });
+});
+
+
+test('agent phone: two chats keep selected sessions and callbacks separate', async () => {
+ const tg=fakeTelegram(), agents=fakeAgents();
+ const hub=createAgentPhone({telegram:tg,agents,settings:()=>({chatId:1,switches:{approve:true}}),projectDir:p=>p});
+ await hub.command(1,'/new claude alpha'); await hub.command(2,'/new codex beta');
+ await hub.command(1,'task alpha'); await hub.command(2,'task beta');
+ assert.deepEqual(agents.calls.filter(c=>c[0]==='send'),[['send','s1','task alpha'],['send','s2','task beta']]);
+ await hub.onEvent({id:'s2',type:'ask',askId:'r',kind:'permission',title:'Write beta'});
+ const ask=tg.out.at(-1); assert.equal(ask.chat,2);
+ await hub.callback(1,ask.buttons[0][0].data);
+ assert.equal(agents.calls.some(c=>c[0]==='answer'),false);
+ await hub.callback(2,ask.buttons[0][0].data);
+ assert.equal(agents.calls.filter(c=>c[0]==='answer').length,1);
+ await hub.onEvent({id:'s1',type:'turn',status:'done'}); await hub.onEvent({id:'s2',type:'turn',status:'done'});
+});
+
+test('agent phone: /chat is handled locally and malformed option cannot approve a permission', async () => {
+ const tg=fakeTelegram(),agents=fakeAgents();
+ const hub=createAgentPhone({telegram:tg,agents,settings:()=>({chatId:1,switches:{approve:true}}),projectDir:p=>p});
+ await hub.command(1,'/new claude alpha');
+ await hub.onEvent({id:'s1',type:'ask',askId:'r',kind:'permission',title:'Write'});
+ const data=tg.out.at(-1).buttons[0][0].data.replace(/:a$/,':o999');
+ await hub.callback(1,data); assert.equal(agents.calls.some(c=>c[0]==='answer'),false);
+ assert.equal(await hub.command(1,'/chat'),true);
+ assert.equal(await hub.command(1,'normal chat'),false);
+});
+
+test('agent phone: interruption is reported as stopped, not failure or success', async () => {
+ const tg=fakeTelegram(),agents=fakeAgents();
+ const hub=createAgentPhone({telegram:tg,agents,settings:()=>({chatId:1,switches:{}}),projectDir:p=>p});
+ await hub.command(1,'/new claude alpha');
+ await hub.onEvent({id:'s1',type:'turn',status:'interrupted'});
+ assert.match(tg.out.at(-1).text,/หยุดโดยผู้ใช้/);
+ assert.ok(!tg.out.at(-1).text.startsWith('✅'));
+});
+
+
+test('agent phone: expiry during delayed status delivery cannot create a late approval button',async()=>{
+ const tg=fakeTelegram(),agents=fakeAgents();let release;
+ const original=tg.send;
+ tg.send=async(chat,text,buttons)=>{if(text.includes('กำลังทำ'))await new Promise(r=>release=r);return original(chat,text,buttons);};
+ const hub=createAgentPhone({telegram:tg,agents,settings:()=>({chatId:1,switches:{approve:true}}),projectDir:p=>p});
+ await hub.command(1,'/new claude alpha');await hub.onEvent({id:'s1',type:'tool',label:'Read'});
+ const pending=hub.onEvent({id:'s1',type:'ask',askId:'r',kind:'permission',title:'Write'});
+ await Promise.resolve();await hub.onEvent({id:'s1',type:'answered',askId:'r',expired:true});release();await pending;
+ assert.equal(tg.out.some(o=>o.buttons),false);
+ await hub.onEvent({id:'s1',type:'turn',status:'done'});
+});
+
+
+test('agent phone: provider without session permission never offers or accepts always',async()=>{
+ const tg=fakeTelegram(),agents=fakeAgents();const hub=createAgentPhone({telegram:tg,agents,settings:()=>({chatId:1,switches:{approve:true}}),projectDir:p=>p});
+ await hub.command(1,'/new claude alpha');await hub.onEvent({id:'s1',type:'ask',askId:'r',kind:'permission',title:'Write',allowSession:false});
+ const buttons=tg.out.at(-1).buttons.flat();assert.equal(buttons.some(b=>b.text.includes('ตลอด')),false);
+ await hub.callback(1,buttons[0].data.replace(/:a$/,':s'));assert.equal(agents.calls.some(c=>c[0]==='answer'),false);
+ await hub.callback(1,buttons[0].data);assert.equal(agents.calls.filter(c=>c[0]==='answer').length,1);
+});
+
+
+test('agent phone: typing answers the selected session when two sessions ask at once',async()=>{
+ const tg=fakeTelegram(),agents=fakeAgents();const hub=createAgentPhone({telegram:tg,agents,settings:()=>({chatId:1,switches:{approve:true}}),projectDir:p=>p});
+ await hub.command(1,'/new claude alpha');await hub.command(1,'/new codex beta');
+ await hub.onEvent({id:'s1',type:'ask',askId:'a',kind:'question',title:'Alpha?'});await hub.onEvent({id:'s2',type:'ask',askId:'b',kind:'question',title:'Beta?'});
+ await hub.command(1,'/use s1');await hub.command(1,'answer alpha');
+ assert.deepEqual(agents.calls.at(-1),['answer','a','allow','answer alpha']);
 });

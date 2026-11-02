@@ -11,7 +11,8 @@ const NAME = /^[a-z0-9][a-z0-9-_]{0,48}$/i;
 // git and gh: real programs, no shell (so a commit message is never a command)
 const exec = (file, args, cwd) => new Promise((resolve, reject) => execFile(file, args, { cwd, windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out, errOut) => (err ? reject(new Error((errOut || err.message).trim().slice(0, 400))) : resolve(out.trim()))));
 
-function createVibe({ getSettings, saveState }) {
+function createVibe({ getSettings, saveState, runner = exec }) {
+  const exec = runner;
   const workspace = () => getSettings().workspace;
   const dirOf = (name) => {
     if (!NAME.test(name || '')) throw new Error('ชื่อโปรเจกต์ใช้ได้แค่ a-z 0-9 - _ (ไม่เกิน 49 ตัว)');
@@ -35,8 +36,14 @@ function createVibe({ getSettings, saveState }) {
   async function diff(name) {
     const dir = dirOf(name);
     await exec('git', ['add', '-A', '--intent-to-add'], dir).catch(() => {});
-    const stat = await exec('git', ['diff', '--stat'], dir);
-    const text = await exec('git', ['diff'], dir);
+    const base = await exec('git', ['rev-parse', '--verify', 'HEAD'], dir).then(() => ['HEAD'], () => []);
+    let stat = await exec('git', ['diff', '--stat', ...base], dir);
+    let text = await exec('git', ['diff', ...base], dir);
+    if (!base.length) {
+      const staged = await exec('git', ['diff', '--cached', '--stat'], dir);
+      const patch = await exec('git', ['diff', '--cached'], dir);
+      stat = [staged, stat].filter(Boolean).join('\n'); text = [patch, text].filter(Boolean).join('\n');
+    }
     return { stat: stat || 'ยังไม่มีอะไรเปลี่ยน', text };
   }
   async function commit(name, message) {
@@ -48,6 +55,8 @@ function createVibe({ getSettings, saveState }) {
   // a branch of its own, pushed, and a pull request (gh must be signed in; the repo needs a remote)
   async function pullRequest(name, title) {
     const dir = dirOf(name);
+    await exec('git', ['remote', 'get-url', 'origin'], dir);
+    await exec('git', ['rev-parse', '--verify', 'HEAD'], dir);
     const branch = `uncle/${Date.now().toString(36)}`;
     await exec('git', ['checkout', '-q', '-b', branch], dir);
     await exec('git', ['push', '-q', '-u', 'origin', branch], dir);

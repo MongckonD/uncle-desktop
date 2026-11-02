@@ -35,6 +35,11 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
   const asks = new Map(); // a tool waiting for your tap: id -> resolve
   const voiceJobs=new Map(); // one task-bound, short-lived PIN challenge per paired chat
   const histories=new Map();
+  const projectsByChat = new Map();
+  const hubCurrent = chatId => hub?.currentFor ? hub.currentFor(chatId) : hub?.current;
+  const hubProject = chatId => hub?.projectFor ? hub.projectFor(chatId) : hub?.project;
+  const selectedProject = chatId => hubProject(chatId) || projectsByChat.get(chatId) || (chatId === settings().chatId ? settings().project : null);
+  const pickProject = (chatId, name) => { projectsByChat.set(chatId, name); if (chatId === settings().chatId) setProject(name); };
   const historyFor=chatId=>{if(chatId===settings().chatId)return history;if(!histories.has(chatId))histories.set(chatId,[]);return histories.get(chatId);};
   const remember=(chatId,role,content)=>{const h=historyFor(chatId);h.push({role,content});while(h.length>12)h.shift();};
 
@@ -69,13 +74,14 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
   // the Vibecode commands; true when the text was one
   async function codeCommand(chatId, text) {
     const [cmd, ...rest] = text.split(/\s+/), arg = rest.join(' ');
-    const project = settings().project;
+    const project = selectedProject(chatId);
     const need = () => { if (!project) throw new Error('ยังไม่ได้เลือกโปรเจกต์ · /project ชื่อ'); return project; };
+    if (['/commit', '/pr', '/undo'].includes(cmd) && project && hub?.busy(project)) return telegram.send(chatId, 'Agent กำลังทำงานในโปรเจกต์นี้ รอจบรอบหรือหยุดงานก่อนแก้ประวัติ Git');
     const pinned = async (run) => ((settings().requirePin===false||checkPin(rest.at(-1) || '')) ? run() : telegram.send(chatId, 'คำสั่งนี้ต้องใส่ PIN ต่อท้าย เช่น /pr 1234 (ตั้ง PIN ได้ในแท็บ Telegram บนคอม)'));
     switch (cmd) {
       case '/projects': { const list = coding.projects(); return telegram.send(chatId, list.length ? list.map((p) => `${p === project ? '▶' : '•'} ${p}${hub?.busy(p) ? ' (กำลังทำงาน)' : ''}`).join('\n') : 'ยังไม่มีโปรเจกต์ · /create ชื่อ'); }
-      case '/create': { const [name, agent] = rest; await coding.create(name, agent); setProject(name); return hub.open(chatId, name, agent === 'codex' ? 'codex' : 'claude'); }
-      case '/project': { if (!coding.projects().includes(arg)) return telegram.send(chatId, `ไม่มีโปรเจกต์ ${arg}`); setProject(arg); return telegram.send(chatId, `เลือก ${arg} แล้ว · /code เพื่อสั่งงาน`); }
+      case '/create': { const [name, agent] = rest; await coding.create(name, agent); pickProject(chatId, name); return hub.open(chatId, name, agent === 'codex' ? 'codex' : 'claude'); }
+      case '/project': { if (!coding.projects().includes(arg)) return telegram.send(chatId, `ไม่มีโปรเจกต์ ${arg}`); hub?.leave?.(chatId); pickProject(chatId, arg); return telegram.send(chatId, `เลือก ${arg} แล้ว · /code เพื่อสั่งงาน`); }
       case '/code': return project ? hub.open(chatId, project) : telegram.send(chatId, 'ยังไม่ได้เลือกโปรเจกต์ · /projects ดูรายชื่อ หรือ /create ชื่อ');
       case '/diff': { const d = await coding.diff(need()); await telegram.send(chatId, `📝 ${d.stat}`); if (d.text) await telegram.sendFile(chatId, 'document', Buffer.from(d.text), `${project}.diff`, 'text/plain'); return undefined; }
       case '/commit': return telegram.send(chatId, `✅ ${await coding.commit(need(), arg)}`);
@@ -206,7 +212,7 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
         if(voiceJobs.has(actor)&&/^(?:ยกเลิก|ไม่ต้อง|หยุด)(?:ครับ|ค่ะ|คะ)?$/.test(heard)){voiceJobs.delete(actor);return telegram.send(chatId,'ยกเลิกคำสั่งเสียงแล้ว');}
         if (remote && pcAsk?.answerNeeded) return await pcAnswer(chatId, true, heard);
         if (remote && settings().switches.control && Date.now() - (pcArmed.get(actor) || 0) < 120000) { pcArmed.delete(actor); pcSteps = 0; return telegram.send(chatId, await remote.pc(heard,chatId)); }
-        if (hub?.current && (await hub.command(chatId, heard))) return undefined;
+        if (hubCurrent(chatId) && (await hub.command(chatId, heard))) return undefined;
         if(remote){
           const {computerTask}=await import('../renderer/js/computer-intent.js');
           const task=computerTask(heard);
@@ -221,8 +227,8 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
         return await reply(chatId, heard, { heardVoice: true });
       }
       if (m.kind === 'photo') {
-        if (hub?.current) { // a mockup or a screenshot: saved in the project, the agent told where to look
-          const file = coding.saveImage(hub.project, await telegram.download(m.fileId));
+        if (hubCurrent(chatId)) { // a mockup or a screenshot: saved in the project, the agent told where to look
+          const file = coding.saveImage(hubProject(chatId), await telegram.download(m.fileId));
           return await hub.say(chatId, `${m.caption || 'ทำให้หน้าตาเหมือนรูปนี้'}\n(ดูรูปที่ ${file})`);
         }
         const image = (await telegram.download(m.fileId)).toString('base64');
@@ -236,7 +242,9 @@ function createPhone({ telegram, settings, answer, transcribe, speak, media, cod
         const bytes = await telegram.download(m.fileId);
         if (bytes.includes(0)) return telegram.send(chatId, 'ไฟล์นี้ไม่ใช่ข้อความ อ่านไม่ได้');
         const body = bytes.toString('utf8'), cut = body.length > FILE_CHARS;
-        return await reply(chatId, `${m.caption || 'สรุปไฟล์นี้ให้หน่อย'}\n\n--- ${m.name}${cut ? ` (ตัดเหลือ ${FILE_CHARS} ตัวอักษรแรก)` : ''} ---\n${body.slice(0, FILE_CHARS)}`);
+        const prompt = `${m.caption || 'สรุปไฟล์นี้ให้หน่อย'}\n\n--- ${m.name}${cut ? ` (ตัดเหลือ ${FILE_CHARS} ตัวอักษรแรก)` : ''} ---\n${body.slice(0, FILE_CHARS)}`;
+        if (hubCurrent(chatId)) return await hub.say(chatId, prompt);
+        return await reply(chatId, prompt);
       }
       if (m.kind === 'video') {
         if (m.size > 20 * 1024 * 1024) return telegram.send(chatId, 'คลิปใหญ่เกิน 20 MB Telegram ไม่ให้ bot ดาวน์โหลด ลองส่งคลิปสั้นลง');

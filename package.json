@@ -1,6 +1,6 @@
 {
   "name": "uncle-desktop",
-  "version": "0.23.10",
+  "version": "0.23.11",
   "description": "A Thai-friendly AI desktop companion with selectable characters and coding agent status.",
   "author": "TheUncleDev",
   "repository": "github:pk115/uncle-desktop",
@@ -71,8 +71,9 @@
       "LICENSE",
       "README.md",
       "README.th.md",
-      "README.upstream.md",
-      "docs/*.md",
+      "docs/**/*.md",
+      "docs/images/**",
+      "docs/provenance/**",
       "!scripts/live-*.js",
       "!node_modules/onnxruntime-web/**",
       "!node_modules/onnxruntime-node/bin/napi-v*/linux/**"

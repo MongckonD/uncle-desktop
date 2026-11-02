@@ -1,3 +1,6 @@
+> เอกสารประวัติ: ย้ายเก็บวันที่ 2026-11-01 เนื้อหาและผลทดสอบด้านล่างเป็นของเวลาที่เขียน
+> สถานะงานปัจจุบันใช้ [แผนงานหลัก](../../ROADMAP_TH.md) เท่านั้น ไม่ใช้ checklist นี้เป็นงานที่ต้องทำซ้ำ
+
 # Uncle Desktop — แผนเพิ่มฟีเจอร์จาก lachydotmcg
 
 อัปเดต 30 ตุลาคม 2026 · รุ่น 0.8.1 (เผยแพร่บน GitHub Releases แล้ว)
@@ -93,7 +96,7 @@
 
 ## หลักฐานและแหล่งอ้างอิง
 
-- ฐานโค้ดเรา: package version 0.8.1; ดู [คู่มือเสียงและข้อจำกัด](SPEECH_TH.md), [ตัวละคร](CHARACTERS.md), [ภาษาไทย](THAI_SUPPORT.md)
+- ฐานโค้ดเรา: package version 0.8.1; ดู [คู่มือเสียงและข้อจำกัด](../../SPEECH_TH.md), [ตัวละคร](../../CHARACTERS.md), [ภาษาไทย](../../THAI_SUPPORT.md)
 - `npm test` เป็น unit tests; ไม่ใช้แทนการทดสอบเสียงไทยจริงหรือ provider ที่ต้องมีคีย์
 - ฝั่งอ้างอิง: [README และ checklist](https://github.com/lachydotmcg/capri-desktop/blob/main/README.md), ตรวจ main SHA `72d6b8374905689d8d49736079f322c9429bd52e` วันที่ 29 ตุลาคม 2026
 - [Source tree ณ SHA ที่ตรวจ](https://github.com/lachydotmcg/capri-desktop/tree/72d6b8374905689d8d49736079f322c9429bd52e/app), [แนวทาง build/contribute](https://github.com/lachydotmcg/capri-desktop/blob/main/CONTRIBUTING.md)

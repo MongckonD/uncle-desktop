@@ -4,7 +4,7 @@
 
 **A little AI companion on your screen who speaks Thai, does things on your computer for you, and keeps an eye on your coding AI.**
 
-[ภาษาไทย](README.th.md) · **English** · [Français](README.fr.md) · [Original Capri docs](README.upstream.md)
+[ภาษาไทย](README.th.md) · **English** · [Français (Capri archive)](docs/archive/upstream/README.fr.md) · [Original Capri docs](docs/archive/upstream/README.upstream.md)
 
 [![Release](https://img.shields.io/github/v/release/pk115/uncle-desktop?label=download)](https://github.com/pk115/uncle-desktop/releases/latest)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4)
@@ -37,7 +37,7 @@
 <details>
 <summary>App screenshot</summary>
 
-<img src="docs/done.png" alt="Uncle Desktop on the screen" width="560">
+<img src="docs/images/done.png" alt="Uncle Desktop on the screen" width="560">
 
 </details>
 
@@ -83,7 +83,7 @@ Get them from **[Releases](https://github.com/pk115/uncle-desktop/releases/lates
 
 ### 🎭 Characters
 
-17 characters. Pick one with pictures in Settings › **Character**, or quickly from her right-click menu.
+19 characters. Pick one with pictures in Settings › **Character**, or quickly from her right-click menu.
 
 | UncleDev | Blacky | Mira | Pinky | Mochi | Lili |
 | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -92,6 +92,8 @@ Get them from **[Releases](https://github.com/pk115/uncle-desktop/releases/lates
 | <img src="assets/characters/luna/portrait.png" width="90"> | <img src="assets/characters/pudding/portrait.png" width="90"> | <img src="assets/characters/bald-man/portrait.png" width="90"> | <img src="assets/characters/cute-girl/portrait.png" width="90"> | <img src="assets/characters/drunk-uncle/portrait.png" width="90"> | <img src="assets/characters/lazy-boy/portrait.png" width="90"> |
 | **Chubby Girl** | **Fatty Girl** | **Angry Guy** | **Vulture** | **Capri** (original) | |
 | <img src="assets/characters/chubby-girl/portrait.png" width="90"> | <img src="assets/characters/fatty-girl/portrait.png" width="90"> | <img src="assets/characters/angry-guy/portrait.png" width="90"> | <img src="assets/characters/vulture/portrait.png" width="90"> | — | |
+
+Also available: **Tama** and **Peegee**.
 
 - Each one has their own personality, lines and poses
 - **View:** full body, or upper body to see their face
@@ -307,6 +309,8 @@ Change them in Settings › System › Hotkeys.
 - Screen text is treated as data, never as instructions: she won't do what a web page tells her to
 
 ## For developers
+
+Documentation map and review: [docs/README.md](docs/README.md) · Shared agent rules: [AGENTS.md](AGENTS.md) · Active roadmap: [ROADMAP_TH.md](docs/ROADMAP_TH.md)
 
 Needs [Node.js](https://nodejs.org/) 20 or newer.
 
