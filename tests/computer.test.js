@@ -103,3 +103,31 @@ test('a small local model\'s open_app with the name in text still opens that app
  assert.equal(actionFrom('{"tool":"open_website","reason":"Open YouTube","target":786998,"text":"https://www.youtube.com"}').url,'https://www.youtube.com');
  assert.throws(()=>actionFrom('{"tool":"open_website","reason":"x","text":"file:///C:/a"}'));
 });
+
+test('simple "open X and Y" requests are recognised without the AI; anything else is left to it',async()=>{
+ const {openList}=await import('../src/renderer/js/computer-intent.js');
+ assert.deepEqual(openList('เปิดgoogleแล้วก็เปิดyoutube'),[{name:'google',url:'https://www.google.com'},{name:'youtube',url:'https://www.youtube.com'}]);
+ assert.deepEqual(openList('ช่วยเปิด YouTube ให้หน่อย'),[{name:'YouTube',url:'https://www.youtube.com'}]);
+ assert.deepEqual(openList('open Discord and Spotify'),[{name:'Discord',url:'https://discord.com/app'},{name:'Spotify'}]);
+ assert.deepEqual(openList('เปิด Notepad, Calculator'),[{name:'Notepad'},{name:'Calculator'}]);
+ for(const t of ['google วิธีทำข้าวผัด','เปิด google แล้วค้นหาราคาทองวันนี้ที่ร้านใกล้บ้าน','พิมพ์ hello ใน Notepad','','เปิด'])assert.equal(openList(t),null,t);
+});
+
+test('several direct actions run in order without the AI, and the job ends on the last receipt',async()=>{
+ const opened=[];let last;
+ const native={request:async a=>a.action==='read'?structuredClone(view):a.action==='windows'?[view.app]:{},stop(){}};
+ const c=createComputer({native,decide:async()=>{throw new Error('the AI must not be asked');},
+  openSite:async url=>{opened.push(url);return `ส่งเปิด ${url} ในเบราว์เซอร์แล้ว`;},notify:s=>{last=s;}});
+ c.start({task:'เปิดgoogleแล้วก็เปิดyoutube',consent:true,security:'guarded',directAction:[
+  {tool:'open_website',url:'https://www.google.com',reason:'เปิด google'},{tool:'open_website',url:'https://www.youtube.com',reason:'เปิด youtube'}]});
+ while(c.busy)await wait();
+ assert.deepEqual(opened,['https://www.google.com','https://www.youtube.com']);
+ assert.equal(last.status,'done');assert.match(last.evidence,/youtube/);
+});
+
+test('Thai site names ("เปิดยูทูป") are known sites, for chat and computer control alike',async()=>{
+ const {openList,SITES}=await import('../src/renderer/js/computer-intent.js');
+ assert.deepEqual(openList('เปิดยูทูป'),[{name:'ยูทูป',url:'https://www.youtube.com'}]);
+ assert.deepEqual(openList('เปิดกูเกิลแล้วเปิดเฟสบุ๊ค').map(p=>p.url),['https://www.google.com','https://www.facebook.com']);
+ for(const [name,url] of Object.entries(SITES))assert.match(url,/^https:\/\//,name);
+});

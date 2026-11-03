@@ -870,9 +870,9 @@ export function clean(text) {
     .trim();
 }
 
-// A site from SITES named in the text: { name, url }, or null.
+// A site from SITES named in the text: { name, url }, or null. Thai names have no word boundaries.
 function namedSite(text) {
-  const name = Object.keys(SITES).find((n) => new RegExp(`\\b${n}\\b`, 'i').test(text));
+  const name = Object.keys(SITES).find((n) => (/^[a-z]/.test(n) ? new RegExp(`\\b${n}\\b`, 'i').test(text) : text.includes(n)));
   return name ? { name: new URL(SITES[name]).hostname.replace(/^www\./, ''), url: SITES[name] } : null;
 }
 

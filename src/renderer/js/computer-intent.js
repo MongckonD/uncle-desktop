@@ -8,7 +8,25 @@ export const SITES = {
   wikipedia: 'https://www.wikipedia.org', linkedin: 'https://www.linkedin.com', pinterest: 'https://www.pinterest.com',
   crunchyroll: 'https://www.crunchyroll.com', outlook: 'https://outlook.live.com', whatsapp: 'https://web.whatsapp.com',
   discord: 'https://discord.com/app', soundcloud: 'https://soundcloud.com', deezer: 'https://www.deezer.com',
+  // as they're said and typed in Thai ("เปิดยูทูป"): matched as plain text, Thai has no word boundaries
+  'ยูทูป': 'https://www.youtube.com', 'ยูทูบ': 'https://www.youtube.com', 'กูเกิล': 'https://www.google.com', 'กูเกิ้ล': 'https://www.google.com',
+  'จีเมล': 'https://mail.google.com', 'เฟซบุ๊ก': 'https://www.facebook.com', 'เฟสบุ๊ค': 'https://www.facebook.com', 'เฟสบุ๊ก': 'https://www.facebook.com',
+  'เน็ตฟลิกซ์': 'https://www.netflix.com', 'ติ๊กต็อก': 'https://www.tiktok.com', 'ติ๊กต๊อก': 'https://www.tiktok.com', 'อินสตาแกรม': 'https://www.instagram.com',
+  'ไอจี': 'https://www.instagram.com', 'ดิสคอร์ด': 'https://discord.com/app', 'วิกิพีเดีย': 'https://www.wikipedia.org', 'ทวิตเตอร์': 'https://x.com',
 };
+
+// "เปิดgoogleแล้วก็เปิดyoutube", "open Discord and Spotify": only things to open, each a known site or a
+// name for main.js to find among the apps. null when anything else is asked: then the AI plans it.
+const OPEN_VERB=/^(?:(?:ช่วย|กรุณา|ขอ|รบกวน)\s*)?(?:เปิด(?:แอป|โปรแกรม|เว็บไซต์|เว็บ)?|open|launch|start|go to|ไปที่)\s*/i;
+const OPEN_TAIL=/\s*(?:ให้หน่อย|ให้ที|หน่อย|ที|ด้วย|ครับ|ค่ะ|คะ|นะ|จ้า|please)+\s*$/i;
+export function openList(text){
+ const value=String(text||'').trim();
+ if(!OPEN_VERB.test(value)||value.length>200)return null;
+ const parts=value.split(/\s*(?:,|、|และ|กับ|แล้วก็|แล้ว|ต่อด้วย|\band then\b|\bthen\b|\band\b)\s*/i).map(p=>p.replace(OPEN_VERB,'').replace(OPEN_TAIL,'').trim()).filter(Boolean);
+ // a name, not a sentence or another action (Thai has no spaces between words: its verbs say it)
+ if(!parts.length||parts.length>6||parts.some(p=>p.length>30||/\s.*\s/.test(p)||/ค้นหา|หา|พิมพ์|เล่น|ดู|ฟัง|เขียน|ส่ง|ปิด|กด|คลิก|ตั้ง|search|type|play|watch|close|click/i.test(p)))return null;
+ return parts.map(name=>{const key=name.toLowerCase().replace(/^www\./,'').replace(/\.com$/,'');return Object.hasOwn(SITES,key)?{name,url:SITES[key]}:{name};});
+}
 
 // Route explicit requests, not descriptions or questions about the assistant's abilities.
 export function volumeCommand(text) {

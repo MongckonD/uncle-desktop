@@ -1367,6 +1367,20 @@ function registerIpc() {
       return llm.chat(cfg.provider,cfg,{model:computerModel,messages:[{role:'system',content:prompt},observation],json:true},()=>{},AbortSignal.any([signal,timeout]));
     },
   });
+  // "open google and youtube": every part a known site or an app found here, opened in order without the AI
+  async function openPlan(task) {
+    const {openList}=await import('../renderer/js/computer-intent.js');const list=openList(task);
+    if(!list)return null;
+    const actions=[];
+    for(const part of list){
+      if(part.url){actions.push({tool:'open_website',url:part.url,reason:`เปิด ${part.name}`});continue;}
+      const item=await launch.find(part.name);
+      if(!item||launch.risky(item))return null; // not something to open as is: the AI plans the whole job
+      actions.push({tool:'open_app',name:part.name,reason:`เปิด ${item.name||part.name}`});
+    }
+    return {task,directAction:actions};
+  }
+  async function simplePlan(task) { const volume=await volumePlan(task); return volume.directAction||volume.firstAction?volume:(await openPlan(task))||volume; }
   async function volumePlan(task) {
     const {volumeCommand}=await import('../renderer/js/computer-intent.js');const volume=volumeCommand(task);
     if(!volume)return {task};
@@ -1384,7 +1398,7 @@ function registerIpc() {
       const o = computerOptions();
       if (!o.consent) return 'ยังไม่ได้อนุญาตควบคุมเครื่องบนคอม (หน้าควบคุมเครื่อง)';
       computerConfig = llmConfig(); computerModel = modelFor('computer', computerConfig);
-      const plan=await volumePlan(task);
+      const plan=await simplePlan(task);
       if (!computerModel&&!plan.directAction) return 'ยังไม่ได้ตั้งค่า AI บนคอม';
       remoteJobChat=chatId;
       remoteJob = computer.start({ ...plan, consent: true, images: o.images, security: o.security, switches: o.switches, remote:true });
@@ -1404,7 +1418,7 @@ function registerIpc() {
     if(computer.busy)throw new Error('มีงานกำลังทำอยู่');
     if(request?.voice&&(!computerOptions().consent||!computerOptions().voice))throw new Error('กรุณาอนุญาตเริ่มงานด้วยเสียงก่อน');
     computerConfig=llmConfig();computerModel=modelFor('computer',computerConfig);
-    const {task,consent,images,voice}=request||{};const plan=await volumePlan(task);
+    const {task,consent,images,voice}=request||{};const plan=await simplePlan(task);
     if(!computerModel&&!plan.directAction)throw new Error('กรุณาตั้งค่า AI และเลือกโมเดลก่อนเริ่ม');
     return computer.start({...plan,consent,images,voice,security:computerOptions().security,switches:computerOptions().switches});
   });
