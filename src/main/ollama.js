@@ -82,7 +82,10 @@ function warm(model) {
 }
 
 // Her answer, streamed: onDelta(piece) as it comes, resolves with all of it.
-async function chat({ model, messages }, onDelta, signal) {
+// json: a computer-control step, which must be one JSON object: Ollama holds the model to it, kept
+// steady (low temperature), with room for a long "type" text and a context the window's ~100 targets
+// fit in (Ollama's default 4096 cut the prompt off, and the model answered {"error": ...}).
+async function chat({ model, messages, json = false }, onDelta, signal) {
   // cloud models think before they answer, and that counts in num_predict: kept short, with room for it.
   // A local one (qwen3...) is told not to: on this PC thinking is slow, and 240 tokens of it cut her answer off.
   const cloud = isCloud(model);
@@ -97,7 +100,8 @@ async function chat({ model, messages }, onDelta, signal) {
       keep_alive: '15m', // she stays loaded while you chat
       ...(thinks && { think: 'low' }),
       ...(!cloud && { think: false }), // ignored by models that don't think
-      options: { temperature: 0.85, num_predict: thinks ? 1200 : 240 },
+      ...(json && { format: 'json' }),
+      options: { temperature: json ? 0.2 : 0.85, num_predict: thinks ? 1200 : json ? 800 : 240, ...(json && { num_ctx: 16384 }) },
     }),
     signal,
   });

@@ -93,3 +93,13 @@ test('switches: each one lets her skip asking for its own kind of step',()=>{
  assert.ok(needsConfirmation({tool:'media',action:'mute'},view,off));assert.ok(!needsConfirmation({tool:'media',action:'mute'},view,{...off,media:true}));
  assert.ok(needsConfirmation({tool:'open_app',name:'Terminal'},view,{...off,apps:true}));
 });
+
+test('a small local model\'s open_app with the name in text still opens that app, other tools keep text',()=>{
+ const a=actionFrom('{"tool":"open_app","reason":"เปิด YouTube","target":1,"text":"YouTube"}');
+ assert.equal(a.name,'YouTube');assert.equal(a.text,undefined);
+ assert.equal(actionFrom('{"tool":"open_app","reason":"x","name":"Notepad","text":"ignored"}').name,'Notepad');
+ assert.throws(()=>actionFrom('{"tool":"open_app","reason":"no name at all"}'),/ระบุชื่อแอป/);
+ assert.equal(actionFrom('{"tool":"type","target":1,"text":"hello","reason":"x"}').text,'hello');
+ assert.equal(actionFrom('{"tool":"open_website","reason":"Open YouTube","target":786998,"text":"https://www.youtube.com"}').url,'https://www.youtube.com');
+ assert.throws(()=>actionFrom('{"tool":"open_website","reason":"x","text":"file:///C:/a"}'));
+});

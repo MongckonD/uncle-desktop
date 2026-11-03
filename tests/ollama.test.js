@@ -42,3 +42,24 @@ test('ollama: a local model the app has not listed yet is still told not to thin
   await ollama.chat({ model: 'qwen3:14b', messages: [] }, () => {});
   assert.equal(sent[0].think, false);
 });
+
+test('ollama: a computer-control step is held to JSON, steady and with room; chat is not', async (t) => {
+  const sent = fakeOllama(t, [{ name: 'qwen3:8b', capabilities: ['completion', 'thinking'] }]);
+  await ollama.models();
+  await ollama.chat({ model: 'qwen3:8b', messages: [], json: true }, () => {});
+  assert.equal(sent[0].format, 'json');
+  assert.equal(sent[0].think, false);
+  assert.equal(sent[0].options.temperature, 0.2);
+  assert.equal(sent[0].options.num_predict, 800);
+  assert.equal(sent[0].options.num_ctx, 16384); // a window's targets don't fit in Ollama's default 4096
+  await ollama.chat({ model: 'qwen3:8b', messages: [] }, () => {});
+  assert.equal(sent[1].format, undefined);
+  assert.equal(sent[1].options.num_predict, 240);
+  assert.equal(sent[1].options.num_ctx, undefined);
+});
+
+test('the site list shared by chat and computer control', async () => {
+  const { SITES } = await import('../src/renderer/js/computer-intent.js');
+  assert.equal(SITES.youtube, 'https://www.youtube.com');
+  assert.equal(Object.hasOwn(SITES, 'constructor'), false);
+});

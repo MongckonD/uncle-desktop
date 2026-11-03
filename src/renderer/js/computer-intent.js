@@ -1,3 +1,15 @@
+// sites asked for by name ("open youtube") when no app on the PC goes by it: the address is hers, not
+// the model's, so it opens right away like an app you named (chat.js, and main.js for an open_app step)
+export const SITES = {
+  youtube: 'https://www.youtube.com', google: 'https://www.google.com', gmail: 'https://mail.google.com',
+  twitch: 'https://www.twitch.tv', netflix: 'https://www.netflix.com', reddit: 'https://www.reddit.com',
+  twitter: 'https://x.com', instagram: 'https://www.instagram.com', tiktok: 'https://www.tiktok.com',
+  facebook: 'https://www.facebook.com', github: 'https://github.com', chatgpt: 'https://chatgpt.com',
+  wikipedia: 'https://www.wikipedia.org', linkedin: 'https://www.linkedin.com', pinterest: 'https://www.pinterest.com',
+  crunchyroll: 'https://www.crunchyroll.com', outlook: 'https://outlook.live.com', whatsapp: 'https://web.whatsapp.com',
+  discord: 'https://discord.com/app', soundcloud: 'https://soundcloud.com', deezer: 'https://www.deezer.com',
+};
+
 // Route explicit requests, not descriptions or questions about the assistant's abilities.
 export function volumeCommand(text) {
  const value=String(text||'').trim().replace(/^(?:ช่วย|กรุณา|ขอ|รบกวน)\s*/,'').replace(/[๐-๙]/g,c=>String('๐๑๒๓๔๕๖๗๘๙'.indexOf(c)));

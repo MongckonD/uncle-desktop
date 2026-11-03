@@ -1,4 +1,4 @@
-import { computerTask } from './computer-intent.js';
+import { computerTask, SITES } from './computer-intent.js';
 // Talking to her: you type in her panel, and a model (setup.js picks which) answers as her, in
 // writing. The replies are AI-generated, and the panel says so on every chat.
 // She can do a few things on your PC when you ask (Windows): open an app or a game, play music or
@@ -132,17 +132,6 @@ const NAME_ASK = /(?:appelle[- ]moi|call me|my name is|je m['’]appelle|ll[aá]
 // "souviens-toi que…", "remember that…", "recuerda que…", "lembra que…", "запомни, что…" (said first thing)
 const MEMO_ASK = /^\s*(?:capri,?\s+|stp,?\s+|please,?\s+)?(?:souviens[- ]toi(?: que| de)?|n['’]oublie pas(?: que| de)?|remember(?: that)?|recuerda(?: que)?|lembr[ae](?:-se)?(?: que| de)?|запомни,?(?: что)?)\s+(.{3,200})/iu;
 const MEMORIES_MAX = 30;
-// sites asked for by name ("open youtube") when no app on the PC goes by it: the address is hers, not
-// the model's, so it opens right away like an app you named
-const SITES = {
-  youtube: 'https://www.youtube.com', google: 'https://www.google.com', gmail: 'https://mail.google.com',
-  twitch: 'https://www.twitch.tv', netflix: 'https://www.netflix.com', reddit: 'https://www.reddit.com',
-  twitter: 'https://x.com', instagram: 'https://www.instagram.com', tiktok: 'https://www.tiktok.com',
-  facebook: 'https://www.facebook.com', github: 'https://github.com', chatgpt: 'https://chatgpt.com',
-  wikipedia: 'https://www.wikipedia.org', linkedin: 'https://www.linkedin.com', pinterest: 'https://www.pinterest.com',
-  crunchyroll: 'https://www.crunchyroll.com', outlook: 'https://outlook.live.com', whatsapp: 'https://web.whatsapp.com',
-  discord: 'https://discord.com/app', soundcloud: 'https://soundcloud.com', deezer: 'https://www.deezer.com',
-};
 // a browser named with a site ("open youtube on chrome"): the site, in the browser you use
 const BROWSER = /chrome|edge|firefox|opera|brave|vivaldi|duckduckgo|browser/i;
 // local models this small mostly talk nonsense ("llama3.2:1b", "qwen2.5:0.5b"…)
