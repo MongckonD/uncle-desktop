@@ -1373,10 +1373,11 @@ function registerIpc() {
     if(!list)return null;
     const actions=[];
     for(const part of list){
+      // the app when it's on this PC (Discord, Spotify...), as chat does; the site when it isn't, or it's only a browser
+      const item=await launch.find(part.name),app=item&&!launch.risky(item)&&!/chrome|edge|firefox|opera|brave|vivaldi|duckduckgo|browser/i.test(item.name);
+      if(app){actions.push({tool:'open_app',name:part.name,reason:`เปิด ${item.name||part.name}`});continue;}
       if(part.url){actions.push({tool:'open_website',url:part.url,reason:`เปิด ${part.name}`});continue;}
-      const item=await launch.find(part.name);
-      if(!item||launch.risky(item))return null; // not something to open as is: the AI plans the whole job
-      actions.push({tool:'open_app',name:part.name,reason:`เปิด ${item.name||part.name}`});
+      return null; // not something to open as is: the AI plans the whole job
     }
     return {task,directAction:actions};
   }

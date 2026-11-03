@@ -422,6 +422,7 @@ async function boot() {
       });return true;
     },
     onState:state=>{
+      if(state.status==='done'&&!state.voice&&!state.remote&&!computerUI.open)panel.say({kind:'info',face:'laugh',line:state.message,hold:4000}); // no dialog to pop up for a job that worked
       listeningUI.externalJob=state.voice&&['running','confirm'].includes(state.status);
       if(state.voice&&!['running','confirm'].includes(state.status)){
         listeningUI.clearConfirmation();listeningUI.followUntil=Date.now()+10000;

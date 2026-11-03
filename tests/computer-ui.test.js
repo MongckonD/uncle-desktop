@@ -11,7 +11,8 @@ test('Telegram job completion updates results without opening desktop settings',
  }
  const c=await controller();c.root.hidden=false;c.update({status:'done',remote:true,message:'done',steps:[]});assert.equal(c.root.hidden,false,'Explicitly opened settings remain open');
 });
-test('local results and necessary Telegram confirmations retain their existing UI',async()=>{
- const local=await controller();local.update({status:'done',message:'local',steps:[]});assert.equal(local.root.hidden,false);
+test('a local job that went wrong opens the dialog, one that worked does not (her bubble says it); Telegram confirmations still show',async()=>{
+ const local=await controller();local.update({status:'error',message:'local',steps:[]});assert.equal(local.root.hidden,false);
+ const worked=await controller();worked.update({status:'done',message:'เปิด Discord แล้ว',steps:[]});assert.equal(worked.root.hidden,true);
  const remote=await controller();remote.update({status:'confirm',remote:true,message:'confirm',steps:[],answerNeeded:false});assert.equal(remote.root.hidden,false);assert.equal(remote.confirm.hidden,false);
 });
