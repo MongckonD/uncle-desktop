@@ -112,6 +112,7 @@ const voiceAgent=require('./voice-agent');
 let listening;
 const { TRAY, LANGS } = require('./labels');
 const { createBridge } = require('./bridge');
+const { createToken } = require('../../hooks/bridge-token');
 const { startWindowWatch } = require('./windows');
 const llm = require('./llm');
 const ollama = require('./ollama');
@@ -1960,6 +1961,7 @@ function main() {
     });
     createBridge({
       port: PORT,
+      token: createToken(path.join(app.getPath('userData'), 'bridge-token')), // new each launch: hooks read it back
       // her own Claude Code chat's hooks would cover its answer with theirs
       onEvent: (evt) => {
         if (llm.isChatSession(evt.session_id)) return;

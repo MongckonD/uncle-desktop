@@ -1,10 +1,11 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 // Local app bridge only; no external accounts or live voice calls.
 const assert = require('node:assert/strict');
 const BASE = `http://127.0.0.1:${process.env.CAPRI_PORT || 47823}`;
 const pause = ms => new Promise(r => setTimeout(r, ms));
 async function post(route, body) {
-  const response = await fetch(`${BASE}/${route}`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
+  const response = await fetch(`${BASE}/${route}`, {method:'POST', headers: authHeaders(), body:JSON.stringify(body)});
   const result = await response.json();
   assert.ok(result.ok, JSON.stringify(result)); return result;
 }

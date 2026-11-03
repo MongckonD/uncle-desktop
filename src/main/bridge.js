@@ -1,9 +1,11 @@
 'use strict';
 
 // Local HTTP bridge. Claude Code hooks POST their event JSON to /event,
-// we hand it to the overlay. Bound to 127.0.0.1 only.
+// we hand it to the overlay. Bound to 127.0.0.1 only, and /event and /debug
+// need the launch token (hooks/bridge-token.js) so other local programs can't use them.
 
 const http = require('node:http');
+const { HEADER, sameToken } = require('../../hooks/bridge-token');
 
 const MAX_BODY = 512 * 1024;
 
@@ -37,7 +39,8 @@ function readJson(req) {
   });
 }
 
-function createBridge({ port, onEvent, onDebug }) {
+function createBridge({ port, token, onEvent, onDebug }) {
+  if (!token) throw new Error('bridge token missing');
   const server = http.createServer(async (req, res) => {
     // Browsers always send an Origin header on cross-site requests; hooks never do.
     // Refusing those keeps random web pages from puppeting Capri.
@@ -49,7 +52,10 @@ function createBridge({ port, onEvent, onDebug }) {
       return send(res, 200, { ok: true, name: 'capri', pid: process.pid });
     }
 
+    const allowed = sameToken(req.headers[HEADER], token);
+
     if (req.method === 'POST' && url.pathname === '/event') {
+      if (!allowed) return send(res, 401, { ok: false });
       try {
         const evt = await readJson(req);
         if (!evt || typeof evt !== 'object' || typeof evt.hook_event_name !== 'string') {
@@ -63,6 +69,7 @@ function createBridge({ port, onEvent, onDebug }) {
     }
 
     if (onDebug && url.pathname.startsWith('/debug/')) {
+      if (!allowed) return send(res, 401, { ok: false });
       try {
         const body = req.method === 'POST' ? await readJson(req).catch(() => ({})) : {};
         return send(res, 200, await onDebug(url.pathname.slice(7), body));

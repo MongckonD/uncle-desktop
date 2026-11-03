@@ -1,11 +1,12 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const statePath = path.join(__dirname, '../captures/import-smoke-state.json');
 const base = `http://127.0.0.1:${process.env.CAPRI_PORT || 47823}`;
 async function post(route, body) {
-  const res = await fetch(`${base}/debug/${route}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const res = await fetch(`${base}/debug/${route}`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
   const result = await res.json();
   assert.ok(result.ok, JSON.stringify(result));
   return result.value;

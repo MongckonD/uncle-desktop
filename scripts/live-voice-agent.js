@@ -1,8 +1,9 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {createNative}=require('../src/main/computer');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-async function inspect(js){const r=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({js})}).then(r=>r.json());if(!r.ok)throw Error(r.error||'App test failed');return r.value;}
+async function inspect(js){const r=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers: authHeaders(),body:JSON.stringify({js})}).then(r=>r.json());if(!r.ok)throw Error(r.error||'App test failed');return r.value;}
 async function run(question,interrupt){
  const v=window.dev.voiceAgent,l=window.dev.listening,SDK=window.ElevenLabsClient.Conversation;
  const originalMedia=navigator.mediaDevices.getUserMedia,oldLoader=v.loadSDK,oldHost=v.host,oldVolume=v.volume;

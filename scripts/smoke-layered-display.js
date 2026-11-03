@@ -1,9 +1,10 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 const assert = require('node:assert/strict');
 const base = 'http://127.0.0.1:47823';
 const delay = ms => new Promise(r => setTimeout(r, ms));
 async function post(route, body) {
-  const result=await (await fetch(`${base}/${route}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})).json();
+  const result=await (await fetch(`${base}/${route}`,{method:'POST',headers: authHeaders(),body:JSON.stringify(body)})).json();
   assert.ok(result.ok,JSON.stringify(result));return result.value;
 }
 const inspect=js=>post('debug/eval',{js});

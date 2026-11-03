@@ -1,4 +1,5 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 const assert=require('node:assert/strict');
 (async()=>{
   const js=`(async()=>{
@@ -23,7 +24,7 @@ const assert=require('node:assert/strict');
     }
     return {cases,failures};
   })()`;
-  const response=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({js})});
+  const response=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers: authHeaders(),body:JSON.stringify({js})});
   const result=await response.json();assert.ok(result.ok,JSON.stringify(result));console.log(JSON.stringify(result.value));
   assert.equal(result.value.cases,48);assert.deepEqual(result.value.failures,[],'Live application still serves a Luna head strip');
 })().catch(error=>{console.error(error);process.exitCode=1;});

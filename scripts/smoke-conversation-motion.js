@@ -1,4 +1,5 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 // Exercises this application's own canvas using synthetic audio; no microphone.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -8,7 +9,7 @@ const out=path.join(__dirname,'../../character-sources/motion-0.20/live-qa');
 fs.mkdirSync(out,{recursive:true});
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function inspect(js){
-  const response=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({js})});
+  const response=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers: authHeaders(),body:JSON.stringify({js})});
   const result=await response.json();assert.ok(result.ok,JSON.stringify(result));return result.value;
 }
 async function until(js){for(let i=0;i<150;i++){if(await inspect(js))return;await pause(100);}throw Error('Renderer did not become ready');}

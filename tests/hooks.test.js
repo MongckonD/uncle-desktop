@@ -7,12 +7,19 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { once } = require('node:events');
 const { createBridge } = require('../src/main/bridge');
+const { createToken } = require('../hooks/bridge-token');
 const { configure, EVENTS } = require('../scripts/install-codex-hooks');
+
+// The hooks read the bridge token from this file, as they read Capri's own in userData
+const tokenDir = fs.mkdtempSync(path.join(os.tmpdir(), 'capri-token-'));
+const TOKEN_FILE = path.join(tokenDir, 'bridge-token');
+const TOKEN = createToken(TOKEN_FILE);
+test.after(() => fs.rmSync(tokenDir, { recursive: true, force: true }));
 
 function invoke(script, input, port) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [path.join(__dirname, '..', 'hooks', script)], {
-      env: { ...process.env, CAPRI_PORT: String(port) }, windowsHide: true,
+      env: { ...process.env, CAPRI_PORT: String(port), CAPRI_TOKEN_FILE: TOKEN_FILE }, windowsHide: true,
     });
     let output = '';
     child.stdout.on('data', (s) => { output += s; });
@@ -47,7 +54,7 @@ test('Codex activity, approval, completion travel through the real bridge and Br
   t.after(() => clearInterval(brain.thinkTimer));
   const events = [];
   const pending = [];
-  const server = createBridge({ port: 0, onEvent(evt) { events.push(evt); pending.push(brain.handle(evt)); } });
+  const server = createBridge({ port: 0, token: TOKEN, onEvent(evt) { events.push(evt); pending.push(brain.handle(evt)); } });
   await once(server, 'listening');
   t.after(() => new Promise((resolve) => server.close(resolve)));
   const port = server.address().port;
@@ -178,13 +185,13 @@ test('installer preserves other hooks, is idempotent, backs up, and uninstalls o
 
 test('Antigravity: its events reach her as its own sessions, and its hook never decides for it', async (t) => {
   const events = [];
-  const server = createBridge({ port: 0, onEvent(evt) { events.push(evt); } });
+  const server = createBridge({ port: 0, token: TOKEN, onEvent(evt) { events.push(evt); } });
   await once(server, 'listening');
   t.after(() => new Promise((resolve) => server.close(resolve)));
   const port = server.address().port;
   const run = (type, payload) => new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [path.join(__dirname, '..', 'hooks', 'capri-agy-hook.js'), type], {
-      env: { ...process.env, CAPRI_PORT: String(port) }, windowsHide: true,
+      env: { ...process.env, CAPRI_PORT: String(port), CAPRI_TOKEN_FILE: TOKEN_FILE }, windowsHide: true,
     });
     let out = '';
     child.stdout.on('data', (s) => { out += s; });

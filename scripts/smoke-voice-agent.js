@@ -1,6 +1,7 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 const assert=require('node:assert/strict');
-async function inspect(js){const r=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({js})}).then(r=>r.json());assert.ok(r.ok,JSON.stringify(r));return r.value;}
+async function inspect(js){const r=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers: authHeaders(),body:JSON.stringify({js})}).then(r=>r.json());assert.ok(r.ok,JSON.stringify(r));return r.value;}
 async function test(){
  const v=window.dev.voiceAgent,l=window.dev.listening,OriginalSocket=window.WebSocket,originalHost=v.host,originalComputer=v.computer;
  await l.load();l.stop();let socket,toolCalls=0,answers=0,interrupted=false;

@@ -1,7 +1,8 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 const assert=require('node:assert/strict');
 (async()=>{
-  const response=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({js:`(async()=>{
+  const response=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers: authHeaders(),body:JSON.stringify({js:`(async()=>{
     const {drawTorsoMotion}=await import('./js/torso-motion.js');
     const results=[];
     for(const resolution of [1,2,3])for(const scale of [.6,1,1.6,3.2])for(const alpha of [1,.5])for(const amplitude of [1,2]){

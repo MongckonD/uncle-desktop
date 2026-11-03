@@ -1,4 +1,5 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 // Live ordered-track QA and review movies from the real renderer, synthetic audio.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -6,7 +7,7 @@ const path=require('node:path');
 const out=path.join(__dirname,'../../character-sources/mochi-30');
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function inspect(js){
-  const r=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({js})});
+  const r=await fetch('http://127.0.0.1:47823/debug/eval',{method:'POST',headers: authHeaders(),body:JSON.stringify({js})});
   const result=await r.json();assert.ok(result.ok,JSON.stringify(result));return result.value;
 }
 (async()=>{

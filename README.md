@@ -307,6 +307,7 @@ Change them in Settings › System › Hotkeys.
 - API keys are encrypted with your user account, never passed to the page and never logged
 - Computer control sends only the current job's data to the AI, keeps no pictures, and sends none when a password field is showing
 - Screen text is treated as data, never as instructions: she won't do what a web page tells her to
+- The coding-AI hook bridge listens on 127.0.0.1 only and needs a token she writes to her data folder each launch, so other programs on the computer can't send her events
 
 ## For developers
 

@@ -1,8 +1,9 @@
 'use strict';
+const { authHeaders } = require('../hooks/bridge-token');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const out=path.join(__dirname,'../../character-sources/mochi-0.23.1');fs.mkdirSync(out,{recursive:true});
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
-async function post(route,data){const r=await fetch('http://127.0.0.1:47823/debug/'+route,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});const v=await r.json();assert.ok(v.ok,JSON.stringify(v));return v.value;}
+async function post(route,data){const r=await fetch('http://127.0.0.1:47823/debug/'+route,{method:'POST',headers: authHeaders(),body:JSON.stringify(data)});const v=await r.json();assert.ok(v.ok,JSON.stringify(v));return v.value;}
 const inspect=js=>post('eval',{js});
 (async()=>{
  let ready=false;for(let i=0;i<80;i++){if(await inspect('!!window.dev?.capri').catch(()=>false)){ready=true;break;}await pause(250);}assert.ok(ready,'App did not finish starting');
