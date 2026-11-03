@@ -28,7 +28,7 @@ const osascript = (script) => new Promise((resolve, reject) => execFile('osascri
 async function list() {
   if (process.platform === 'darwin') { // the apps in the Dock (not background ones); macOS asks once to allow System Events
     const out = await osascript('tell application "System Events" to get name of (processes where background only is false)');
-    return out.split(', ').filter((n) => n && !KEEP.has(n.toLowerCase()) && !['finder', 'uncle desktop'].includes(n.toLowerCase())).map((name) => ({ name, process: name, label: '', ids: [] }));
+    return out.split(', ').filter((n) => n && !KEEP.has(n.toLowerCase()) && !['finder', 'uncle desktop', 'rocky'].includes(n.toLowerCase())).map((name) => ({ name, process: name, label: '', ids: [] }));
   }
   if (process.platform !== 'win32') return [];
   const out = await powershell(

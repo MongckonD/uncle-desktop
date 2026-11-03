@@ -89,7 +89,7 @@ public static class UncleComputer {
     return new { app=Window(h),foreground=GetForegroundWindow().ToInt64(),targets=rows };
   }
   static void Cancelled(){if(!String.IsNullOrEmpty(cancelFile)&&System.IO.File.Exists(cancelFile))throw new Exception("หยุดแล้ว");if((GetAsyncKeyState(0x1B)&0x8000)!=0)throw new Exception("หยุดด้วย Escape");}
-  static void Check(IntPtr h) { Cancelled();if(!IsWindow(h))throw new Exception("หน้าต่างปิดไปแล้ว");if(!IsWindowVisible(h))throw new Exception("หน้าต่างถูกซ่อน กรุณาเปิดให้เห็นก่อนเริ่ม");if(Pid(h)==ownPid || Pid(h)==Process.GetCurrentProcess().Id)throw new Exception("ไม่ควบคุมหน้าต่างของ Uncle เอง");if(GetForegroundWindow()!=h)throw new Exception("หน้าต่างเปลี่ยนแล้ว กรุณาอ่านหน้าจอใหม่"); }
+  static void Check(IntPtr h) { Cancelled();if(!IsWindow(h))throw new Exception("หน้าต่างปิดไปแล้ว");if(!IsWindowVisible(h))throw new Exception("หน้าต่างถูกซ่อน กรุณาเปิดให้เห็นก่อนเริ่ม");if(Pid(h)==ownPid || Pid(h)==Process.GetCurrentProcess().Id)throw new Exception("ไม่ควบคุมหน้าต่างของ Rocky เอง");if(GetForegroundWindow()!=h)throw new Exception("หน้าต่างเปลี่ยนแล้ว กรุณาอ่านหน้าจอใหม่"); }
   static void Inputs(Input[] a) { if(SendInput((uint)a.Length,a,Marshal.SizeOf(typeof(Input)))!=a.Length)throw new Exception("Windows ปฏิเสธการควบคุม อาจเป็นหน้าต่างผู้ดูแลระบบ"); }
   static Input K(ushort vk,ushort scan,uint flags) { return new Input {type=1,data=new Union {key=new Key {vk=vk,scan=scan,flags=flags}}}; }
   static void MouseClick(uint down,uint up) { Inputs(new[]{new Input {type=0,data=new Union{mouse=new Mouse{flags=down}}},new Input{type=0,data=new Union{mouse=new Mouse{flags=up}}}}); }

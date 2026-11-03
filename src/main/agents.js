@@ -112,7 +112,7 @@ function codex({ cwd, resume, model, run, emit, requestTimeoutMs }) {
     const p = m.params || {};
     if (m.id !== undefined) { // its request: a permission, or a question
       if (!['item/tool/requestUserInput', 'item/commandExecution/requestApproval', 'item/fileChange/requestApproval'].includes(m.method)) {
-        send({ jsonrpc: '2.0', id: m.id, error: { code: -32601, message: 'This request is not supported by Uncle Desktop' } });
+        send({ jsonrpc: '2.0', id: m.id, error: { code: -32601, message: 'This request is not supported by Rocky' } });
         return;
       }
       const question = m.method === 'item/tool/requestUserInput';
@@ -157,7 +157,7 @@ function codex({ cwd, resume, model, run, emit, requestTimeoutMs }) {
   child.on('exit', disconnected);
   child.stdin.on('error', disconnected);
   const ready = (async () => {
-    await call('initialize', { clientInfo: { name: 'uncle-desktop', title: 'Uncle Desktop', version: '1' }, capabilities: null });
+    await call('initialize', { clientInfo: { name: 'uncle-desktop', title: 'Rocky', version: '1' }, capabilities: null });
     send({ jsonrpc: '2.0', method: 'initialized' });
     const available = (await call('model/list', { limit: 100 })).data || [];
     const selected = model ? available.find(m => m.model === model || m.id === model) : available.find(m => m.isDefault && !m.hidden) || available.find(m => !m.hidden);

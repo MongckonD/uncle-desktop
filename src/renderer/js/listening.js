@@ -25,7 +25,7 @@ export class Listening {
     this.mic = field('ไมโครโฟน', select([['', 'ไมค์เริ่มต้นของเครื่อง']]));
     const refresh = el('button', 'อนุญาตไมค์และรีเฟรชรายชื่อ'); refresh.onclick = () => this.devices(); box.append(refresh);
     this.words = field('คำเรียก — หนึ่งคำเรียกต่อบรรทัด สูงสุด 5 คำ', el('textarea')); this.words.rows = 2; this.words.maxLength = 304;
-    const reset = el('button', 'คืนคำเรียกเริ่มต้น'); reset.onclick = () => { this.words.value = 'เฮ้ อังเคิล'; }; box.append(reset);
+    const reset = el('button', 'คืนคำเรียกเริ่มต้น'); reset.onclick = () => { this.words.value = 'เฮ้ ร็อคกี้'; }; box.append(reset);
     this.follow = field('รอฟังต่อหลังตอบ (วินาที; 0 = เรียกใหม่ทุกครั้ง)', el('input')); this.follow.type = 'number'; this.follow.min = 0; this.follow.max = 30;
     this.threshold = field('ความไวไมค์ — ค่าต่ำรับเสียงเบาได้มากขึ้น', el('input')); this.threshold.type = 'range'; this.threshold.min = 0.005; this.threshold.max = 0.1; this.threshold.step = 0.005;
     this.review = el('input'); this.review.type = 'checkbox'; const review = el('label'); review.append(this.review, document.createTextNode(' ตรวจข้อความก่อนส่ง (ปิดเพื่อส่งอัตโนมัติแบบสนทนา)')); box.append(review);

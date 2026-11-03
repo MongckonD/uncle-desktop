@@ -5,7 +5,7 @@ export class VoiceAgent {
   Object.assign(this,{host,listening,speech,computer,loadSDK});this.serial=0;this.seenUserEvents=new Set();this.ownedJobs=new Set();this.settings={engine:'classic'};
   const box=listening.root.firstElementChild;
   const field=(text,node,parent=box)=>{const label=el('label',text);label.append(node);parent.append(label);return node;};
-  this.engine=el('select');for(const [value,text]of [['classic','Uncle เดิม — Local / Gemini / OpenAI'],['elevenlabs','ElevenLabs Voice Agent — สนทนาต่อเนื่อง / พูดแทรก']]){const o=el('option',text);o.value=value;this.engine.append(o);}
+  this.engine=el('select');for(const [value,text]of [['classic','ระบบเดิม — Local / Gemini / OpenAI'],['elevenlabs','ElevenLabs Voice Agent — สนทนาต่อเนื่อง / พูดแทรก']]){const o=el('option',text);o.value=value;this.engine.append(o);}
   const engineLabel=el('label','ระบบสนทนาด้วยเสียง');engineLabel.append(this.engine);box.insertBefore(engineLabel,box.children[3]);
   this.group=el('div');this.group.className='voice-agent-settings';box.insertBefore(this.group,engineLabel.nextSibling);
   this.group.append(el('p','โหมดนี้ส่งเสียงไมค์ บทสนทนา และผลเครื่องมือไป ElevenLabs ใช้เครดิตในบัญชีของคุณ แยกจาก AI ที่ใช้วางแผนงานควบคุมเครื่อง เลือกรอคำเรียกได้: ตรวจชื่อในเครื่องก่อน แล้วเปิดการสนทนาออนไลน์จนกดหยุด'));
@@ -64,7 +64,7 @@ export class VoiceAgent {
   if(typeof event.message!=='string'||event.message.length>8000)return;
   const user=event.role==='user'||event.source==='user';
   if(user&&event.event_id!==undefined){if(this.seenUserEvents.has(event.event_id))return;this.seenUserEvents.add(event.event_id);}
-  this.listening.heard.value=(user?'คุณ: ':'Uncle: ')+event.message;
+  this.listening.heard.value=(user?'คุณ: ':'Rocky: ')+event.message;
   if(!user)return;
   if(/^(หยุดงาน|ยกเลิกงาน|stop|cancel)[.!\s]*$/i.test(event.message)){this.host.computerStop();return;}
   if(this.pending&&event.message!==this.injected)await this.answer(event.message);

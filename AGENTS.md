@@ -29,7 +29,7 @@
 
 ## จุดที่ต้องรักษาเฉพาะโปรเจกต์
 
-- ชื่อผลิตภัณฑ์ยังเป็น **Uncle Desktop**; Honey ถูกลบแล้ว ไม่เพิ่มกลับมา
+- ชื่อที่ผู้ใช้เห็นใน fork นี้คือ **Rocky** (เจ้าของเปลี่ยนจาก Uncle Desktop เมื่อ 2026-11-03) ไม่เปลี่ยนกลับ; ชื่อภายใน (appId `uncle.desktop`, package `uncle-desktop`, โฟลเดอร์ข้อมูล `capri-desktop`, ชื่อคลาส/ไฟล์ชั่วคราว) คงเดิมเพื่อไม่ให้การติดตั้งและข้อมูลเดิมเสีย; Honey ถูกลบแล้ว ไม่เพิ่มกลับมา
 - ภาพใช้ logical coordinates 320×420; ตรวจ manifest/atlas จริงก่อนกล่าวอ้างความละเอียดหรือจำนวนเฟรม pipeline รองรับถึง 960×1260 ไม่ได้แปลว่าทุกตัวมีภาพระดับนั้น
 - Mochi มี sequence 30 เฟรมเฉพาะชุดที่ระบุ ส่วนตัวอื่นให้ตรวจ assets ไม่เรียก sprite/texture warp ว่าโมเดล 3D หรือ phoneme lip sync
 - งานภาพอ่าน [character-sprites.md](docs/character-sprites.md) และ `assets/characters/catalog.json`; รักษา DPI/GPU/memory limits และ legacy fallback

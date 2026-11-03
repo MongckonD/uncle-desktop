@@ -105,8 +105,8 @@
 /* Match the original overlay's flat ink/violet plates and hard signal accents. */
 .character-picker__box { border-top: 4px solid var(--red); border-left: 2px solid var(--red); scrollbar-width: thin; scrollbar-color: var(--violet) var(--ink); }
 .character-picker h1 { color: var(--paper); text-shadow: 2px 2px 0 var(--violet); }
-.speech-box::before { content: 'UNCLE // AUDIO SYSTEM'; display: block; flex: none; color: var(--green); font: 600 10px var(--font-mono); letter-spacing: .16em; padding-bottom: 8px; border-bottom: 1px solid var(--violet); }
-#listening-settings .speech-box::before { content: 'UNCLE // VOICE LINK'; }
+.speech-box::before { content: 'ROCKY // AUDIO SYSTEM'; display: block; flex: none; color: var(--green); font: 600 10px var(--font-mono); letter-spacing: .16em; padding-bottom: 8px; border-bottom: 1px solid var(--violet); }
+#listening-settings .speech-box::before { content: 'ROCKY // VOICE LINK'; }
 .character-picker button { transition: background-color 120ms, color 120ms, border-color 120ms; }
 .character-picker button:disabled { opacity: .45; cursor: not-allowed; }
 .character-picker button:not(:disabled):hover { border-color: var(--green); color: var(--green); }
@@ -126,12 +126,12 @@
 .speech-stop { border-left: 4px solid var(--green); box-shadow: 4px 4px 0 var(--violet); }
 .listening-stop { border-left-color: var(--red); }
 @media (prefers-reduced-motion: reduce) { .character-picker button { transition: none; } }
-#all-settings .speech-box::before { content: 'UNCLE // MAINFRAME'; }
+#all-settings .speech-box::before { content: 'ROCKY // MAINFRAME'; }
 .settings-box h2 { margin: 14px 0 4px; font-size: 16px; color: var(--green); }
 
 .computer-stop { top: 16px; bottom: auto; left: 50%; right: auto; transform: translateX(-50%); max-width: min(85vw, 640px); z-index: 150; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-#computer-settings .speech-box::before { content: "UNCLE // COMPUTER CONTROL"; }
+#computer-settings .speech-box::before { content: "ROCKY // COMPUTER CONTROL"; }
 
 /* setup wizard (settings.js): steps on the left, the step on the right */
 .settings-box { width: min(980px, 100%); }

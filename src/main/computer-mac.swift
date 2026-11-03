@@ -15,7 +15,7 @@ let ownerPid = pid_t(args.count > 1 ? args[1] : "0") ?? 0
 let cancelFile = args.count > 2 ? args[2] : ""
 let selfPid = getpid()
 let ok: [String: Any] = ["ok": true]
-let ACCESS = "กรุณาอนุญาต Uncle Desktop ใน System Settings › Privacy & Security › Accessibility แล้วลองใหม่"
+let ACCESS = "กรุณาอนุญาต Rocky ใน System Settings › Privacy & Security › Accessibility แล้วลองใหม่"
 
 func attr(_ e: AXUIElement, _ name: String) -> AnyObject? { var v: AnyObject?; return AXUIElementCopyAttributeValue(e, name as CFString, &v) == .success ? v : nil }
 func str(_ e: AXUIElement, _ name: String) -> String { (attr(e, name) as? String) ?? "" }

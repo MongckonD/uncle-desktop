@@ -48,6 +48,6 @@ test('vibe: PR pipeline pushes only to an isolated local bare remote and calls g
   const origin=path.join(ws,'.origin.git');await runner('git',['init','--bare',origin],ws);await runner('git',['remote','add','origin',origin],dir);
   assert.equal(await vibe.pullRequest('demo','QA only'),'https://example.invalid/pr/fixture');
   assert.deepEqual(calls.find(c=>c[0]==='gh')[1],['pr','create','--fill','--title','QA only']);
-  assert.match(await runner('git',['--git-dir',origin,'branch','--list'],ws),/uncle\//);
+  assert.match(await runner('git',['--git-dir',origin,'branch','--list'],ws),/rocky\//);
  }finally{fs.rmSync(ws,{recursive:true,force:true});}
 });

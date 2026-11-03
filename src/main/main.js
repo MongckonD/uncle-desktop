@@ -855,7 +855,7 @@ function rebuildTray() {
         { label: `Telegram: ${state}`, enabled: false },
         { label: hasToken ? (th ? 'เปลี่ยน bot token…' : 'Change bot token…') : (th ? 'ใส่ bot token…' : 'Add a bot token…'), click: () => sendCommand('telegram-token') },
         ...(hasToken ? [{ label: s.chatId ? (th ? 'ผูกกับแชตใหม่…' : 'Pair again…') : (th ? 'ผูกกับแชตของคุณ…' : 'Pair with your chat…'), click: () => { const code = telegram.startPairing(); shell.openExternal(`https://t.me/${bot}?start=${code}`); notifyUser({ kind: 'info', message: `เปิด Telegram แล้ว กด Start (หรือส่ง /start ${code}) ภายใน 10 นาที` }); } }] : []),
-        ...(s.chatId ? [{ label: th ? 'ส่งข้อความทดสอบ' : 'Send a test message', click: () => telegram.send(s.chatId, 'ทดสอบจาก Uncle Desktop 👋').catch((err) => notifyUser({ kind: 'error', message: err.message })) }, { label: th ? 'เลิกผูกแชต' : 'Unpair', click: () => savePhone({ chatId: null,allowedUsers:[] }) }] : []),
+        ...(s.chatId ? [{ label: th ? 'ส่งข้อความทดสอบ' : 'Send a test message', click: () => telegram.send(s.chatId, 'ทดสอบจาก Rocky 👋').catch((err) => notifyUser({ kind: 'error', message: err.message })) }, { label: th ? 'เลิกผูกแชต' : 'Unpair', click: () => savePhone({ chatId: null,allowedUsers:[] }) }] : []),
         { label: `LINE: ${setup.openKeys(cfg.apiKeys).line && cfg.line?.to ? (th ? 'ส่งแจ้งเตือนเข้า LINE แล้ว' : 'alerts go to LINE') : (th ? 'ยังไม่ได้ตั้ง' : 'not set')}`, submenu: [
           { label: th ? 'ใส่ LINE channel access token…' : 'LINE channel access token…', click: () => sendCommand('ask-value', { key: 'lineToken', title: 'LINE channel access token', hint: 'จาก LINE Developers › Messaging API', secret: true }) },
           { label: th ? 'ใส่ LINE user ID ของคุณ…' : 'Your LINE user ID…', click: () => sendCommand('ask-value', { key: 'lineTo', title: 'LINE user ID', hint: 'U… (LINE Developers › Basic settings › Your user ID)' }) },
@@ -1317,7 +1317,7 @@ function createTray() {
   let icon = nativeImage.createFromPath(path.join(ROOT, 'assets', 'icons', 'tray.png'));
   if (process.platform === 'darwin') icon = icon.resize({ height: 18 }); // the menu bar's size
   tray = new Tray(icon);
-  tray.setToolTip('Uncle Desktop');
+  tray.setToolTip('Rocky');
   tray.on('click', () => sendCommand('status'));
   rebuildTray();
 }

@@ -58,7 +58,7 @@
   },
   "build": {
     "appId": "uncle.desktop",
-    "productName": "Uncle Desktop",
+    "productName": "Rocky",
     "files": [
       "src/**",
       "assets/**",
@@ -118,20 +118,20 @@
       "identity": "-",
       "hardenedRuntime": false,
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Uncle Desktop listens for your voice commands when you turn the mic on.",
-        "NSAppleEventsUsageDescription": "Uncle Desktop controls the volume, your music and the apps you ask her to quit."
+        "NSMicrophoneUsageDescription": "Rocky listens for your voice commands when you turn the mic on.",
+        "NSAppleEventsUsageDescription": "Rocky controls the volume, your music and the apps you ask her to quit."
       }
     },
     "dmg": {
-      "artifactName": "Uncle-Desktop-${version}-${arch}.${ext}"
+      "artifactName": "Rocky-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
       "runAfterFinish": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Uncle Desktop",
-      "artifactName": "Uncle-Desktop-Setup-${version}.${ext}"
+      "shortcutName": "Rocky",
+      "artifactName": "Rocky-Setup-${version}.${ext}"
     }
   },
   "contributors": [

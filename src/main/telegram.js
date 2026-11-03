@@ -48,7 +48,7 @@ function createTelegram({ getToken, getChat, getAllowedUsers, setChat, onMessage
       if (pairing && Date.now() < pairing.until && text.replace(/^\/start\s*/, '') === pairing.code) {
         pairing = null;
         setChat(chatId,userId);
-        await send(chatId, 'เชื่อมกับ Uncle Desktop แล้ว 🎉 พิมพ์ อัดเสียง หรือส่งรูปมาได้เลย · /help ดูคำสั่ง');
+        await send(chatId, 'เชื่อมกับ Rocky แล้ว 🎉 พิมพ์ อัดเสียง หรือส่งรูปมาได้เลย · /help ดูคำสั่ง');
         return;
       }
       else if(!getAllowedUsers || !getAllowedUsers().includes(userId))return;

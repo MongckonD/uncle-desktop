@@ -6,7 +6,7 @@ const { createHash } = require('node:crypto');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const run = promisify(execFile);
-const DEFAULT_LISTENING = { provider: 'local', localModel: 'small', silenceSeconds: 1.3, vocabulary: 'อังเคิล, UncleDev, Notepad, Spotify, Chrome, YouTube', mode: 'push', deviceId: '', wakeWords: ['เฮ้ อังเคิล'], followSeconds: 10, review: false, cloudConsent: false, threshold: 0.015 };
+const DEFAULT_LISTENING = { provider: 'local', localModel: 'small', silenceSeconds: 1.3, vocabulary: 'Rocky, ร็อคกี้, Notepad, Spotify, Chrome, YouTube', mode: 'push', deviceId: '', wakeWords: ['เฮ้ ร็อคกี้'], followSeconds: 10, review: false, cloudConsent: false, threshold: 0.015 };
 function listeningSettings(value = {}) {
   if (!value || typeof value !== 'object') throw new Error('การตั้งค่าไมค์ไม่ถูกต้อง');
   const s = { ...DEFAULT_LISTENING, ...Object.fromEntries(Object.keys(DEFAULT_LISTENING).filter(k => k in value).map(k => [k, value[k]])) };

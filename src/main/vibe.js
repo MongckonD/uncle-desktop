@@ -49,7 +49,7 @@ function createVibe({ getSettings, saveState, runner = exec }) {
   async function commit(name, message) {
     const dir = dirOf(name);
     await exec('git', ['add', '-A'], dir);
-    await exec('git', ['commit', '-q', '-m', message || 'Changes from Uncle Desktop'], dir);
+    await exec('git', ['commit', '-q', '-m', message || 'Changes from Rocky'], dir);
     return exec('git', ['log', '--oneline', '-1'], dir);
   }
   // a branch of its own, pushed, and a pull request (gh must be signed in; the repo needs a remote)
@@ -57,7 +57,7 @@ function createVibe({ getSettings, saveState, runner = exec }) {
     const dir = dirOf(name);
     await exec('git', ['remote', 'get-url', 'origin'], dir);
     await exec('git', ['rev-parse', '--verify', 'HEAD'], dir);
-    const branch = `uncle/${Date.now().toString(36)}`;
+    const branch = `rocky/${Date.now().toString(36)}`;
     await exec('git', ['checkout', '-q', '-b', branch], dir);
     await exec('git', ['push', '-q', '-u', 'origin', branch], dir);
     return exec('gh', ['pr', 'create', '--fill', ...(title ? ['--title', title] : [])], dir);
