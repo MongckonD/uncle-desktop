@@ -1766,7 +1766,7 @@ function registerIpc() {
   ipcMain.handle('web:search', (_e, query) => {
     const q = String(query || '').trim().slice(0, 300);
     if (!q) return false;
-    return shell.openExternal(`https://www.google.com/search?q=${encodeURIComponent(q)}`).then(() => true, () => false);
+    return launch.browse(`https://www.google.com/search?q=${encodeURIComponent(q)}`).then(() => true, () => false);
   });
   ipcMain.handle('apps:launch', (_e, item) => launch.launch(item).then(() => ({ ok: true }), (err) => ({ ok: false, error: err.message })));
   ipcMain.handle('apps:media', (_e, action) => launch.media(action));
@@ -1961,6 +1961,7 @@ function main() {
   if (process.platform === 'darwin') app.dock?.hide(); // she lives in the menu bar, as in the Windows tray
 
   app.whenReady().then(() => {
+    launch.useChromeProfile(() => config.load().chromeProfile); // web pages in the Chrome profile you pinned
     userCharacters = createUserCharacters(path.join(app.getPath('userData'), 'characters'), nativeImage, CHARACTERS);
     userCharacters.load();
     if (!['codex', 'claude'].includes(config.load().assistant)) config.save({ assistant: activeAssistant().id });

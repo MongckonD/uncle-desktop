@@ -47,6 +47,7 @@ const DEFAULTS = {
   watchScreen: false, // she looks at your screen now and then and says something about it (look.js)
   lookAsked: false,  // she told you what looking means (where the picture goes) and you said yes
   hotkeys: { stopJob: 'Control+Alt+X', toggle: 'Control+Alt+C', voice: 'Control+Alt+V', mute: 'Control+Alt+M', ghost: 'Control+Alt+H' }, // '' turns one off (her settings)
+  chromeProfile: null, // web pages she opens go to this Chrome profile ("Profile 1"); null: your default browser
   learn: true,       // after a few exchanges she notes what she learned about you in me.md (not with Claude Code)
 };
 

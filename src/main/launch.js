@@ -248,6 +248,23 @@ end if` : null;
   ).then(() => true, () => false);
 }
 
+// The Chrome profile her web pages open in, when you pinned one in config.json (chromeProfile:
+// "Profile 1", as Chrome names its folders): else your default browser, in whatever profile it's on.
+let chromeProfile = () => null;
+function useChromeProfile(get) { chromeProfile = get; }
+const CHROME = WIN ? ['ProgramFiles', 'ProgramFiles(x86)', 'LOCALAPPDATA'].map((v) => process.env[v] && path.join(process.env[v], 'Google', 'Chrome', 'Application', 'chrome.exe'))
+  : MAC ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'] : [];
+function chromeArgs(url, profile = chromeProfile()) {
+  if (!/^https?:\/\//i.test(url) || typeof profile !== 'string' || !/^(Default|Profile \d{1,3})$/.test(profile)) return null;
+  const exe = CHROME.find((f) => f && fs.existsSync(f));
+  return exe ? [exe, [`--profile-directory=${profile}`, url]] : null;
+}
+async function browse(url) {
+  const chrome = chromeArgs(url);
+  if (!chrome) return shell.openExternal(url);
+  spawn(chrome[0], chrome[1], { detached: true, stdio: 'ignore' }).unref(); // no shell: the url stays one argument
+}
+
 // A Spotify search for it: in the app if it's installed, else on the web.
 async function music(query) {
   const q = String(query || '').trim().slice(0, 200);
@@ -255,7 +272,7 @@ async function music(query) {
   try {
     await shell.openExternal(`spotify:search:${encodeURIComponent(q)}`);
   } catch {
-    await shell.openExternal(`https://open.spotify.com/search/${encodeURIComponent(q)}`);
+    await browse(`https://open.spotify.com/search/${encodeURIComponent(q)}`);
   }
   return true;
 }
@@ -281,7 +298,7 @@ async function youtube(query) {
   } catch {
     // offline or YouTube changed its page: the search still opens
   }
-  await shell.openExternal(video ? `https://www.youtube.com/watch?v=${video.id}` : search);
+  await browse(video ? `https://www.youtube.com/watch?v=${video.id}` : search);
   return { title: video?.title || null };
 }
 
@@ -302,7 +319,7 @@ async function roblox(query) {
   }
   if (!game?.rootPlaceId) return { name: null };
   const installed = Boolean(app.getApplicationNameForProtocol('roblox://'));
-  await shell.openExternal(installed ? `roblox://experiences/start?placeId=${game.rootPlaceId}` : `https://www.roblox.com/games/${game.rootPlaceId}`);
+  await (installed ? shell.openExternal(`roblox://experiences/start?placeId=${game.rootPlaceId}`) : browse(`https://www.roblox.com/games/${game.rootPlaceId}`));
   // "[💀] Steal a Brainrot" is "Steal a Brainrot"
   const name = String(game.name).replace(/\[[^\]]*\]\s*/g, '').replace(/[\p{Extended_Pictographic}️]/gu, '').trim();
   return { name: name || game.name, app: installed };
@@ -321,8 +338,8 @@ function siteUrl(address) {
 async function site(address) {
   const url = siteUrl(String(address || '').trim());
   if (!url) return false;
-  await shell.openExternal(url.toString());
+  await browse(url.toString());
   return true;
 }
 
-module.exports = { launchables, match, find, launch, media, music, youtube, roblox, site, siteUrl, risky };
+module.exports = { launchables, match, find, launch, media, music, youtube, roblox, site, siteUrl, risky, browse, chromeArgs, useChromeProfile };
