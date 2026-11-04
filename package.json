@@ -3,7 +3,7 @@
   "version": "0.23.11",
   "description": "A Thai-friendly AI desktop companion with selectable characters and coding agent status.",
   "author": "TheUncleDev",
-  "repository": "github:pk115/uncle-desktop",
+  "repository": "github:MongckonD/uncle-desktop",
   "main": "src/main/main.js",
   "private": true,
   "scripts": {
@@ -59,6 +59,7 @@
   "build": {
     "appId": "uncle.desktop",
     "productName": "Rocky",
+    "publish": [{ "provider": "github", "owner": "MongckonD", "repo": "uncle-desktop" }],
     "files": [
       "src/**",
       "assets/**",

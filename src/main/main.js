@@ -157,12 +157,12 @@ function watchMusic() {
     showPlaying(await playerNative.request({ action: 'now_playing' }).catch(() => null));
   }, 4000).unref();
 }
-const RELEASES = 'https://github.com/pk115/uncle-desktop/releases/latest';
+const RELEASES = 'https://github.com/MongckonD/uncle-desktop/releases/latest';
 // a.b.c newer than x.y.z
 const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); const i = [0, 1, 2].find((k) => (x[k] || 0) !== (y[k] || 0)); return i !== undefined && (x[i] || 0) > (y[i] || 0); };
 // macOS: the latest release's version; newer than hers, she tells you (and it's yours to download)
 async function macUpdateCheck() {
-  const res = await fetch('https://api.github.com/repos/pk115/uncle-desktop/releases/latest', { headers: { accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(15000) });
+  const res = await fetch('https://api.github.com/repos/MongckonD/uncle-desktop/releases/latest', { headers: { accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error(`GitHub ${res.status}`);
   const latest = String((await res.json()).tag_name || '').replace(/^v/, '');
   if (latest && newer(latest, app.getVersion())) sendCommand('update', { version: latest, download: true });
@@ -810,7 +810,7 @@ function rebuildTray() {
       ...((cfg.routines || []).length ? [{ label: th ? 'ลบงานตามเวลาทั้งหมด' : 'Remove all routines', click: () => updateConfig({ routines: [] }) }] : []),
       { type: 'separator' },
       { label: th ? 'เลือกไฟล์ Google OAuth key ใหม่…' : 'Choose a Google OAuth key file…', click: () => pickGoogleKeys().catch((err) => sendCommand('assistant-alert', { kind: 'error', message: err.message })) },
-      { label: th ? 'วิธีสร้าง Google OAuth key…' : 'How to make a Google OAuth key…', click: () => shell.openExternal('https://github.com/pk115/uncle-desktop/blob/main/docs/ASSISTANT_TH.md') },
+      { label: th ? 'วิธีสร้าง Google OAuth key…' : 'How to make a Google OAuth key…', click: () => shell.openExternal('https://github.com/MongckonD/uncle-desktop/blob/main/docs/ASSISTANT_TH.md') },
       { type: 'separator' },
       { label: th ? 'แจ้งเตือนเมลสำคัญ' : 'Important mail alerts', type: 'checkbox', checked: cfg.mailAlerts !== false, click: (it) => updateConfig({ mailAlerts: it.checked }) },
       { label: th ? 'แจ้งเตือนก่อนนัดเริ่ม' : 'Meeting alerts', type: 'checkbox', checked: cfg.eventAlerts !== false, click: (it) => updateConfig({ eventAlerts: it.checked }) },
@@ -861,7 +861,7 @@ function rebuildTray() {
           { label: th ? 'ใส่ LINE user ID ของคุณ…' : 'Your LINE user ID…', click: () => sendCommand('ask-value', { key: 'lineTo', title: 'LINE user ID', hint: 'U… (LINE Developers › Basic settings › Your user ID)' }) },
           { label: th ? 'ปิดแจ้งเตือน LINE' : 'Turn LINE alerts off', click: () => updateConfig({ line: { ...cfg.line, to: '' } }) },
         ] },
-        { label: th ? 'วิธีสร้าง bot…' : 'How to make a bot…', click: () => shell.openExternal('https://github.com/pk115/uncle-desktop/blob/main/docs/TELEGRAM_TH.md') },
+        { label: th ? 'วิธีสร้าง bot…' : 'How to make a bot…', click: () => shell.openExternal('https://github.com/MongckonD/uncle-desktop/blob/main/docs/TELEGRAM_TH.md') },
         { type: 'separator' },
         { label: th ? 'ส่งแจ้งเตือนเข้ามือถือ' : 'Alerts to your phone', enabled: false },
         radio('notify', 'always', th ? 'ทุกครั้ง' : 'Always'), radio('notify', 'away', th ? 'เฉพาะตอนไม่อยู่หน้าคอม (5 นาที)' : 'Only while away (5 min)'), radio('notify', 'off', th ? 'ไม่ส่ง' : 'Never'),
