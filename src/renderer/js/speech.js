@@ -1,5 +1,7 @@
 export function speechText(text) {
-  return String(text || '').replace(/```[\s\S]*?```/g, ' ').replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/https?:\/\/\S+/g, '').replace(/[*#`_>|]/g, '').replace(/\s+/g, ' ').trim().slice(0, 2000);
+  return String(text || '').replace(/```[\s\S]*?```/g, ' ').replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/https?:\/\/\S+/g, '').replace(/[*#`_>|]/g, '')
+    // emoji, said aloud as their names ("smiling face with heart eyes"): only shown in her bubble
+    .replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|[‍️⃣]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 2000);
 }
 
 // Her answer as it arrives, said piece by piece: the next piece of `text` worth saying after the

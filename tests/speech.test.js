@@ -49,6 +49,11 @@ test('spoken chat removes code blocks, links and formatting, and limits long rep
   assert.equal(speechText('**สวัสดี** [อ่านต่อ](https://example.com) ```js\nsecret()\n```'), 'สวัสดี อ่านต่อ');
   assert.equal(speechText('x'.repeat(3000)).length, 2000);
 });
+test('spoken chat leaves emoji out but keeps numbers', async () => {
+  const { speechText } = await import(pathToFileURL(path.join(__dirname, '../src/renderer/js/speech.js')).href);
+  assert.equal(speechText('Hi there! 😊🦝 I opened 2 tabs 👍🏽 ❤️ 👨‍👩‍👧 🇹🇭'), 'Hi there! I opened 2 tabs');
+  assert.equal(speechText('🎉✨'), '');
+});
 
 test('mouth levels stay shut on silence and open with loudness, whatever the voice volume', async () => {
   const { mouthLevels } = await import(pathToFileURL(path.join(__dirname, '../src/renderer/js/speech.js')).href);
