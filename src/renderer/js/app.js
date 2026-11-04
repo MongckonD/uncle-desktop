@@ -1160,7 +1160,8 @@ async function boot() {
   // (put away last time: she starts in her biochip)
   lockLook(config, false); ghostLook(config);
   if (config.visible === false) capri.stowNow();
-  else await capri.materialize((capri.locked && lockPlace()) || capri.spot('post'));
+  else if (capri.locked && lockPlace()) await capri.materialize(lockPlace());
+  else await capri.popUp(capri.spot('post')); // up from the bottom of the screen, as your PC starts
   if (capri.locked && !lockPlace()) lockHere(); // locked, and this screen has no place yet: where she landed
   // Windows has its animations off and she's following it: she barely moves. The first time, she
   // says so and asks whether to move anyway (her menu › Animations changes it later).

@@ -95,7 +95,7 @@ export class Capri {
     const now = performance.now();
     this.lastActivity = now;
     this.nextTwitch = now + rand(4000, 9000);
-    this.nextMove = now + rand(40000, 80000);
+    this.nextMove = now + rand(15000, 30000);
     this.nextGaze = now + rand(40000, 90000);
     this.nextShed = now + rand(3000, 8000);
     this.nextNotice = 0;
@@ -546,7 +546,7 @@ export class Capri {
     }
 
     if (this.mode === 'idle' && now > this.nextMove) {
-      this.nextMove = now + rand(25000, 70000);
+      this.nextMove = now + rand(12000, 30000); // up and about: a window's title bar, a peek, somewhere else
       this.wanderStep();
     }
 
@@ -587,9 +587,9 @@ export class Capri {
     }
     const seat = this.pickSeat();
     const r = Math.random();
-    if (seat && r < 0.35) this.sitOn(seat);
-    else if (r < 0.6) this.peek();
-    else if (r < 0.85) this.teleport(this.spot('random'));
+    if (seat && r < 0.55) this.sitOn(seat); // her favourite: up on the title bar of the window in front
+    else if (r < 0.7) this.peek();
+    else if (r < 0.88) this.teleport(this.spot('random'));
     else this.flourish();
   }
 
@@ -1535,6 +1535,43 @@ export class Capri {
     p.glitchSeed = Math.random() * 100;
     p.glitch = 0.3;
     setTimeout(() => { p.glitch = 0; }, ON_ONES * 3);
+  }
+
+  // First appearance when she starts with your PC: she climbs up from the bottom of the screen,
+  // overshoots a little, lands, and cheers. Calm animations: she just fades in (materialize).
+  async popUp(at) {
+    if (reducedMotion.matches) return this.materialize(at);
+    const p = this.p, s = this.scale;
+    this.busy = true;
+    this.pos = { x: at.x, y: this.view.h + (SPRITE.height + 40) * s }; // under the screen's bottom edge
+    this.faceCenter();
+    this.setStance('stand');
+    Object.assign(p, { alpha: 1, collapse: 0, dissolve: 0, glitch: 0, split: 0 });
+    this.place();
+    await sleep(350);
+    this.voice.play('teleport-in');
+    const from = this.pos.y, top = at.y - 46 * s, start = performance.now();
+    for (let t = 0; t < 1;) { // up, a little past her spot
+      t = Math.min(1, (performance.now() - start) / 520);
+      this.pos.y = lerp(from, top, ease.out(t));
+      this.place();
+      await sleep(16);
+    }
+    await sleep(90);
+    const fallAt = performance.now();
+    for (let t = 0; t < 1;) { // and back down onto it
+      t = Math.min(1, (performance.now() - fallAt) / 170);
+      this.pos.y = lerp(top, at.y, t * t);
+      this.place();
+      await sleep(16);
+    }
+    this.pos = { ...at };
+    this.place();
+    this.voice.play('land');
+    this.fx.burst(at.x, at.y - 20 * s, { count: 12, power: 0.6, spread: 60 * s });
+    this.busy = false;
+    await this.perform('land');
+    await this.perform('victory', this.towardCenter());
   }
 
   // First appearance: drop in from the top of the screen.
