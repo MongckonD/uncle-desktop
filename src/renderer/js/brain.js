@@ -15,13 +15,14 @@ const THINK_SAY = 40000;
 const THINK_LONG = 120000;
 
 export class Brain {
-  constructor({ capri, panel, voice, host, mission, lang = 'fr', assistant = 'claude' }) {
+  constructor({ capri, panel, voice, host, mission, lang = 'fr', replyLang = 'auto', assistant = 'claude' }) {
     this.capri = capri;
     this.panel = panel;
     this.voice = voice;
     this.host = host;
     this.mission = mission; // today's log, for her report card (mission.js)
     this.lang = lang;
+    this.replyLang = replyLang; // 'en': she answers in English whatever you write in
     this.assistant = assistant; // 'claude', 'codex' or 'agy': whose events she follows
     this.custom = {};       // what you made her (custom.js): { userName, persona, myLines, memories }
     this.sessions = new Map();

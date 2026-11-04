@@ -106,7 +106,7 @@ async function boot() {
   capri.setFraming(config.characterFraming);
 
   const mission = new Mission();
-  const brain = new Brain({ capri, panel, voice, host, mission, lang: config.lang, assistant: config.assistant });
+  const brain = new Brain({ capri, panel, voice, host, mission, lang: config.lang, replyLang: config.replyLang, assistant: config.assistant });
   brain.character = config.character;
   const identify = (character) => {
     const base = `../../assets/characters/${character.id}/`;
@@ -857,6 +857,7 @@ async function boot() {
     brain.watching = cfg.claude !== false;
     brain.custom = mine(cfg);
     brain.assistant = cfg.assistant;
+    brain.replyLang = cfg.replyLang;
     panel.labels = linesFor(cfg.lang, cfg.assistant, brain.character);
     switchCharacter(cfg.character);
     if (cfg.scale !== capri.scale) capri.setScale(cfg.scale);

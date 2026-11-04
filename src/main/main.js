@@ -534,6 +534,7 @@ function updateConfig(patch) {
   if ('badges' in patch && !Object.values(patch.badges || {}).every((v) => ['full', 'icon'].includes(v))) throw new Error('Invalid badge look');
   if ('badgePos' in patch && !Object.values(patch.badgePos || {}).every((p) => Number.isFinite(p?.right) && Number.isFinite(p?.bottom))) throw new Error('Invalid badge position');
   if ('lockAt' in patch && patch.lockAt !== null && !Object.values(patch.lockAt || {}).every((p) => Number.isFinite(p?.x) && Number.isFinite(p?.y))) throw new Error('Invalid lock place');
+  if ('replyLang' in patch && !['auto', 'en'].includes(patch.replyLang)) throw new Error('Invalid reply language');
   if ('ghostShow' in patch && !['voice', 'peek'].includes(patch.ghostShow)) throw new Error('Invalid hidden-mode answer');
   if (['lockPos', 'lockDrag', 'ghost', 'ghostBadges'].some((k) => k in patch && typeof patch[k] !== 'boolean')) throw new Error('Invalid switch');
   if ('scale' in patch && (!Number.isFinite(patch.scale) || patch.scale < 0.45 || patch.scale > 1.6)) throw new Error('Invalid character scale');
@@ -768,6 +769,12 @@ function rebuildTray() {
         label, type: 'radio', checked: cfg.lang === lang, click: () => updateConfig({ lang }),
       })),
     },
+    replyLang: {
+      label: th ? 'ภาษาที่ตอบ' : 'Answers in',
+      submenu: [['auto', th ? 'ภาษาเดียวกับที่คุณพิมพ์' : 'The language you write in'], ['en', th ? 'อังกฤษเสมอ' : 'Always English']].map(([value, label]) => ({
+        label, type: 'radio', checked: (cfg.replyLang || 'auto') === value, click: () => updateConfig({ replyLang: value }),
+      })),
+    },
     startup: {
       label: t.startup,
       type: 'checkbox',
@@ -900,7 +907,7 @@ function rebuildTray() {
       { label: th ? 'ควบคุมเครื่อง / งานหลายขั้นตอน…' : 'Computer control…', click: () => sendCommand('computer') },
       ...(cfg.claude ? [{ label: t.report, click: () => sendCommand('report') }] : []),
     ] },
-    { id: 'system', title: th ? 'ระบบ' : 'System', items: [item.lang, item.startup, item.display, { type: 'separator' },
+    { id: 'system', title: th ? 'ระบบ' : 'System', items: [item.lang, item.replyLang, item.startup, item.display, { type: 'separator' },
       { label: t.teleport, click: () => sendCommand('teleport') },
       { label: t.satellite, click: () => sendCommand('satellite') },
       { label: t.demo, click: playDemo },

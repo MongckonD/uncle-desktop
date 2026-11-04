@@ -7,7 +7,10 @@ const run = require('node:util').promisify(execFile);
 const { Worker } = require('node:worker_threads');
 
 const CLOUD_VOICES = ['coral', 'alloy', 'nova', 'onyx'];
-const EDGE_VOICES = [{ id: 'th-TH-PremwadeeNeural', name: 'เปรมวดี — หญิง', lang: 'th-TH' }, { id: 'th-TH-NiwatNeural', name: 'นิวัฒน์ — ชาย', lang: 'th-TH' }];
+const EDGE_VOICES = [{ id: 'th-TH-PremwadeeNeural', name: 'เปรมวดี — หญิง', lang: 'th-TH' }, { id: 'th-TH-NiwatNeural', name: 'นิวัฒน์ — ชาย', lang: 'th-TH' },
+  // English, for "always answer in English"
+  { id: 'en-US-AnaNeural', name: 'Ana — เด็กหญิง (อังกฤษ US)', lang: 'en-US' }, { id: 'en-GB-MaisieNeural', name: 'Maisie — เด็กหญิง (อังกฤษ UK)', lang: 'en-GB' },
+  { id: 'en-US-AvaNeural', name: 'Ava — หญิง (อังกฤษ US)', lang: 'en-US' }, { id: 'en-US-AndrewNeural', name: 'Andrew — ชาย (อังกฤษ US)', lang: 'en-US' }];
 // Kokoro: a free voice model that runs on this computer (English, Japanese, Chinese, Spanish, French,
 // Hindi, Italian, Portuguese; Thai through thai-g2p.js, with an accent). Downloaded once (~90 MB) on first use.
 const { thaiRuns, THAI } = require('./thai-g2p');
@@ -98,7 +101,7 @@ function edgeSynthesize(text, voice, rate, signal) {
       const keepAlive = setInterval(() => {}, 1000);
       (async () => {
         const percent = Math.round((workerData.rate - 1) * 100);
-        const tts = new EdgeTTS({ voice: workerData.voice, lang: 'th-TH', rate: (percent >= 0 ? '+' : '') + percent + '%', timeout: 15000 });
+        const tts = new EdgeTTS({ voice: workerData.voice, lang: workerData.voice.slice(0, 5), rate: (percent >= 0 ? '+' : '') + percent + '%', timeout: 15000 });
         const chunks = []; let size = 0;
         for await (const chunk of tts.streamAudio(workerData.text)) {
           if (!Buffer.isBuffer(chunk)) continue;
@@ -199,7 +202,7 @@ function createSpeech({ script = path.join(__dirname, 'speech.ps1'), fetcher = f
       }
       if (settings.provider === 'edge') {
         if (!settings.cloudConsent) throw new Error('กรุณายินยอมส่งข้อความไป Microsoft Edge TTS ในหน้าเสียงพูดก่อน');
-        if (!EDGE_VOICES.some(v => v.id === settings.voice)) throw new Error('กรุณาเลือกเสียงไทย Edge');
+        if (!EDGE_VOICES.some(v => v.id === settings.voice)) throw new Error('กรุณาเลือกเสียง Edge');
         return await edge(text, settings.voice, settings.rate, controller.signal);
       }
       if (!settings.cloudConsent) throw new Error('กรุณายินยอมส่งข้อความไป OpenAI ก่อนใช้เสียงออนไลน์');

@@ -10,6 +10,7 @@ const DEFAULTS = {
   characterFraming: 'full', // full body or enlarged upper body
   muted: false,
   volume: 0.7,
+  replyLang: 'auto', // 'en': she answers in English even when you write in Thai
   lang: 'th',        // Thai by default; 'auto' follows the system language.
   displayId: null,   // null = primary display
   wander: true,      // random teleports when idle

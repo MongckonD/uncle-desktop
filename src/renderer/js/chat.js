@@ -24,6 +24,8 @@ const IN_LANGUAGE = {
   pt: { we: '"a gente" or "nós" in Portuguese', last: 'Escreva tudo em português do Brasil, a não ser que o usuário te escreva em outra língua: aí, na dele. Só as gírias de Night City ficam em inglês, nunca uma frase inteira.', now: 'Responda em português do Brasil, a não ser que esta mensagem esteja escrita em outra língua.' },
   ru: { we: '"мы" in Russian', last: 'Пиши всё по-русски, если только пользователь не пишет тебе на другом языке: тогда на его языке. По-английски остаются только словечки Найт-Сити, никогда не целые фразы.', now: 'Отвечай по-русски, если только это сообщение не написано на другом языке.' },
 };
+// "always in English": she answers in English whatever language you write in (you practise, or like her English voice)
+const ALWAYS_ENGLISH = { we: '', last: 'Always answer in English, even when the user writes in Thai or another language. Keep names of apps, files and code as they are.', now: 'Answer in English, even if this message is in Thai or another language.' };
 const STAY_MS = 10 * 60 * 1000; // no wandering off mid-conversation
 const LOADING_AFTER_MS = 5000;
 const CLOSE_TAG = /\[\[\s*close\s*:?\s*([^\]]*)\]\]/i; // [[close: AM Music]] at the end of her answer
@@ -807,13 +809,18 @@ export class Chat {
 
   // Her language, in it, for right by the message (above).
   languageNote() {
-    return (IN_LANGUAGE[this.brain.lang] || IN_LANGUAGE.en).now;
+    return this.replyLanguage().now;
+  }
+
+  // the language she answers in: yours, or English whatever you write in
+  replyLanguage() {
+    return this.brain.replyLang === 'en' ? ALWAYS_ENGLISH : IN_LANGUAGE[this.brain.lang] || IN_LANGUAGE.en;
   }
 
   // A shorter one, for when she looks at your screen (look.js): who she is, how she talks, how she
   // feels about you right now, and what she's asked to do with the picture.
   lookPersona() {
-    const lang = IN_LANGUAGE[this.brain.lang] || IN_LANGUAGE.en;
+    const lang = this.replyLanguage();
     return [
       this.brain.character?.personality || 'You are Capri, a playful desktop companion.',
       'Rules: one or two short sentences of plain text, no markdown, no lists, no emoji, no tags. Stay in character. Talk to the user, never describe the picture like a report.',
@@ -829,7 +836,7 @@ export class Chat {
   persona() {
     const assistant = ASSISTANT_NAMES[this.brain.assistant] || 'Claude Code';
     const watching = this.brain.watching; // else Claude Code isn't part of her life here
-    const lang = IN_LANGUAGE[this.brain.lang] || IN_LANGUAGE.en;
+    const lang = this.replyLanguage();
     return [
       this.brain.character?.personality || `You are Capri, a playful desktop companion${lang.we ? ` who sometimes says ${lang.we}` : ''}.`,
       watching
