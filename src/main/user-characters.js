@@ -34,7 +34,10 @@ function createUserCharacters(root, nativeImage, catalog) {
           const target = imagePath(meta.id, file);
           if (fs.lstatSync(target).isSymbolicLink() || fs.statSync(target).size > MAX_BYTES) throw new Error('Invalid asset');
           const size = nativeImage.createFromPath(target).getSize();
-          if (size.width !== (file === 'atlas.png' ? 1280 : 320) || size.height !== (file === 'atlas.png' ? 2520 : 420)) throw new Error('Invalid asset size');
+          // an atlas may have a 7th row: her sitting frames (character-renderer.js)
+          const heights = file === 'atlas.png' ? [2520, 2940] : [420];
+          if (size.width !== (file === 'atlas.png' ? 1280 : 320) || !heights.includes(size.height)) throw new Error('Invalid asset size');
+          if (file === 'atlas.png') character.rows = size.height / 420;
         }
         if (!catalog.some((c) => c.id === character.id)) catalog.push(character);
       } catch (error) { console.warn('[characters] skipped invalid custom character', entry.name, error.message); }

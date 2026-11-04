@@ -42,6 +42,15 @@ test('animation priority keeps permission visible, and reactions return to the c
   assert.ok(frameFor('unknown', 500) < 4);
 });
 
+test('a sitting row: rests, blinks, looks around, and opens its mouth to talk', async () => {
+  const { sitFrame } = await load('character-renderer.js');
+  assert.equal(sitFrame(0), 24);
+  assert.equal(sitFrame(1300), 25);
+  assert.equal(sitFrame(2300), 26);
+  assert.equal(sitFrame(140, 0.5), 27);
+  assert.equal(sitFrame(140, 0.5, true), 24);
+});
+
 test('pose transitions fade out promptly and respect reduced motion', async () => {
   const { poseBlend } = await load('character-renderer.js');
   assert.equal(poseBlend(0), 1);

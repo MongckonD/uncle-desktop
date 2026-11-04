@@ -23,7 +23,13 @@ function talkStretch(ctx, renderer, talk = 0) {
   ctx.translate(-x, -y);
 }
 
-export const ANIMATION_ROWS = Object.freeze({ idle: 0, thinking: 1, attention: 2, success: 3, error: 4, sleep: 5 });
+export const ANIMATION_ROWS = Object.freeze({ idle: 0, thinking: 1, attention: 2, success: 3, error: 4, sleep: 5, sit: 6 });
+// sitting on a ledge, for atlases with a 7th row: 0 at rest, 1 a blink, 2 a look around, 3 mouth open
+const SIT_IDLE = [0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 2, 2, 2, 0];
+export function sitFrame(elapsed, talk = 0, still = false) {
+  const column = still ? 0 : talk > 0.04 ? (Math.floor(elapsed / 140) % 2 ? 3 : 0) : SIT_IDLE[Math.floor(elapsed * 4 / 1000) % SIT_IDLE.length];
+  return ANIMATION_ROWS.sit * 4 + column;
+}
 
 // Blend only pose changes. This cannot invent intermediate limb geometry.
 export function poseBlend(elapsed, still = false, duration = 180) {
@@ -150,7 +156,10 @@ export class CharacterRenderer {
       this.state = state;
       this.started = now;
     }
-    this.selectFrame(speakingFrame(state, now - this.started, this.character.fps, reducedMotion.matches, context.talk, this.character.expressive));
+    // on a ledge, an atlas with a sitting row sits (unless she's cheering, upset or asleep)
+    const sitting = context.stance === 'sit' && this.character.rows > ANIMATION_ROWS.sit && ['idle', 'thinking', 'attention'].includes(state);
+    this.selectFrame(sitting ? sitFrame(now - this.started, context.talk, reducedMotion.matches)
+      : speakingFrame(state, now - this.started, this.character.fps, reducedMotion.matches, context.talk, this.character.expressive));
     const motion = this.motion.update(now, {...context, state, still: reducedMotion.matches || this.character.stillImage});
     const secondary = this.torso?.update(now, {...context,...motion,state,
       angle:motion.angle+(context.bodyAngle||0),still:reducedMotion.matches});
