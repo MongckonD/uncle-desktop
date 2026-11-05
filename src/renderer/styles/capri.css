@@ -72,16 +72,17 @@
 }
 
 :root {
-  /* palette sampled from the show */
-  --ink: oklch(0.17 0.035 300);
-  --ink-2: oklch(0.23 0.045 300);
-  --paper: oklch(0.97 0.012 350);
-  --paper-2: oklch(0.84 0.025 340);
-  --paper-3: oklch(0.66 0.035 320);
-  --red: oklch(0.65 0.245 15);
-  --green: oklch(0.88 0.24 148);
-  --violet: oklch(0.55 0.255 292);
-  --blue: oklch(0.6 0.2 260);
+  /* Rocky's pastel pink: blush panels, dark rose text, pink accents (the names stay from the
+     original palette: ink is the panels, paper the text, green and violet the two accents) */
+  --ink: oklch(0.97 0.02 350);
+  --ink-2: oklch(0.93 0.04 350);
+  --paper: oklch(0.36 0.08 355);
+  --paper-2: oklch(0.47 0.07 355);
+  --paper-3: oklch(0.6 0.06 355);
+  --red: oklch(0.62 0.2 15);
+  --green: oklch(0.7 0.14 355);
+  --violet: oklch(0.85 0.075 350);
+  --blue: oklch(0.68 0.1 250);
 
   --font-display: 'Chakra Petch', 'Chakra Petch Thai', 'Leelawadee UI', 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Chakra Petch Thai', 'Leelawadee UI', ui-monospace, Consolas, monospace;
@@ -312,7 +313,7 @@ body {
   margin-left: auto;
   padding: 2px 6px 1px;
   background: var(--accent);
-  color: var(--ink);
+  color: var(--paper);
   font-weight: 600;
   letter-spacing: 0.12em;
   clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
@@ -433,11 +434,12 @@ html[data-motion='reduced'] .panel__bar {
 
 .panel__action.is-primary {
   background: var(--accent);
-  color: var(--ink);
+  color: var(--paper);
 }
 
 .panel__action.is-primary:hover {
   background: var(--paper);
+  color: var(--ink);
 }
 
 .panel__action:focus-visible {
@@ -661,7 +663,7 @@ html[data-motion='reduced'] .panel__bar {
 .snap-plate {
   position: fixed;
   z-index: 2;
-  background: oklch(0.12 0.03 300);
+  background: oklch(0.9 0.04 350);
   pointer-events: none;
 }
 
@@ -754,7 +756,7 @@ html[data-motion='reduced'] .panel__bar {
 }
 
 .panel__input:focus {
-  background: oklch(0.27 0.05 300);
+  background: oklch(0.99 0.012 350);
 }
 
 .panel__input:disabled {
@@ -841,7 +843,7 @@ html[data-motion='reduced'] .panel__bar {
 }
 
 @keyframes ticker-flash {
-  0% { background: var(--green); color: var(--ink); }
+  0% { background: var(--green); color: var(--paper); }
   100% { background: var(--ink); }
 }
 

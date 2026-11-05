@@ -8,10 +8,10 @@
 import { rand, pick, clamp } from './util.js';
 
 export const COLORS = {
-  red: '#ff2152',
-  green: '#36ff7a',
+  red: '#ff6fa5',
+  green: '#ffb3d1', // Rocky's pastel pink sparks (the names are from the original palette)
   ink: '#14101c',
-  violet: '#7b3dff',
+  violet: '#f7a8d0',
   paper: '#fff4f6',
   blue: '#3d6bff',
 };

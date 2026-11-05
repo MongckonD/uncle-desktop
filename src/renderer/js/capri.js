@@ -32,7 +32,7 @@ const SPUN = new Set(['held', 'fly', 'down']);
 
 const UPLINK_DAY = 'capri.uplinkDay'; // the last day she sent the red light up
 
-const GREEN = [0.21, 1, 0.48];
+const GREEN = [1, 0.7, 0.84]; // her impact-frame flash: pastel pink
 const INK = [0.08, 0.06, 0.11];
 const RED = [1, 0.13, 0.32];
 

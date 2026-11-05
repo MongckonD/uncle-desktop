@@ -192,10 +192,11 @@ async function boot() {
     const micStop = document.getElementById('listening-stop'); const micRect = micStop.getBoundingClientRect();
     const onMic = !micStop.hidden && mouse.x >= micRect.left && mouse.x <= micRect.right && mouse.y >= micRect.top && mouse.y <= micRect.bottom;
     const mp=document.getElementById('mini-player'), mpRect=mp?.getBoundingClientRect();const onPlayer=mp&&!mp.hidden&&mouse.x>=mpRect.left&&mouse.x<=mpRect.right&&mouse.y>=mpRect.top&&mouse.y<=mpRect.bottom;
+    const micSwitch=document.getElementById('mic-toggle'), msRect=micSwitch.getBoundingClientRect();const onMicSwitch=!micSwitch.hidden&&mouse.x>=msRect.left&&mouse.x<=msRect.right&&mouse.y>=msRect.top&&mouse.y<=msRect.bottom;
     const pcStop=document.getElementById('computer-stop'), pcRect=pcStop.getBoundingClientRect();const onComputer=!pcStop.hidden&&mouse.x>=pcRect.left&&mouse.x<=pcRect.right&&mouse.y>=pcRect.top&&mouse.y<=pcRect.bottom;
     document.body.style.cursor = onChip() ? 'pointer' : '';
     if (capri.ghost) return setInteractive(Boolean(onComputer || (document.body.classList.contains('ghost-badges') && (onSpeech || onMic || onPlayer))));
-    return setInteractive(Boolean(onPanel || onSpeech || onMic || onComputer || onPlayer || capri.hit(mouse.x, mouse.y) || onChip()));
+    return setInteractive(Boolean(onPanel || onSpeech || onMic || onMicSwitch || onComputer || onPlayer || capri.hit(mouse.x, mouse.y) || onChip()));
   };
   // Her place locked (her menu): she stays where she is; with lockDrag you can still put her elsewhere
   // Her place is kept per screen: lockAt = { [screen id]: { x, y } }, so each screen has its own
@@ -312,10 +313,32 @@ async function boot() {
     host.setConfig({ characterId: list[(i + (e.deltaY > 0 ? 1 : -1) + list.length) % list.length].id });
   }, { passive: false });
 
+  // her mic switch, by her head (on the side away from the screen's edge): one click turns listening on or off
+  const micSwitch = document.getElementById('mic-toggle');
+  const placeMicSwitch = (head = capri.head()) => {
+    const away = capri.stowed || capri.dormant || capri.hidden || capri.ghost || capri.p.alpha < 0.5 || capri.stance === 'peek';
+    micSwitch.hidden = away;
+    if (away) return;
+    const side = head.x > innerWidth - 120 ? -1 : 1, size = 34;
+    const x = Math.min(Math.max(4, head.x + side * 70 * capri.scale + (side < 0 ? -size : 0)), innerWidth - size - 4);
+    const y = Math.min(Math.max(4, head.top + 10), innerHeight - size - 4);
+    micSwitch.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+  };
+  const micLook = () => {
+    const on = Boolean(listeningUI?.stream || listeningUI?.realtime?.active), banner = document.getElementById('listening-stop');
+    micSwitch.classList.toggle('is-on', on);
+    micSwitch.dataset.state = on ? banner.dataset.state || 'listen' : 'off'; // listening, hearing you, or working on it
+    micSwitch.title = on ? banner.textContent.replace(/^■\s*/, '') : 'เปิดไมค์';
+  };
+  for (const event of ['mousedown', 'mouseup']) micSwitch.addEventListener(event, (e) => e.stopPropagation());
+  micSwitch.addEventListener('click', async (e) => { e.stopPropagation(); await listeningUI.toggle(); micLook(); });
+  setInterval(() => { micLook(); placeMicSwitch(); }, 500); // the mic also changes from her menu, hotkeys and voice
+
   // wiring
   capri.onMove = (head) => {
     // pointing at something: the panel goes on her other side, so it doesn't cover it
     panel.setAnchor({ ...head, lean: capri.pointing ? -capri.pointing.dir : 0 }, capri.view);
+    placeMicSwitch(head);
     // she may have moved out from under a still pointer: never leave a dead click zone behind
     refreshHit();
   };

@@ -1,4 +1,4 @@
-:root { --bg: #15131c; --panel: #1e1b28; --line: #2f2a3d; --text: #ece8f4; --dim: #a39cb5; --accent: #8b6cff; --ok: #3ccf8e; --bad: #ff6b81; color-scheme: dark; }
+:root { --bg: #15131c; --panel: #1e1b28; --line: #2f2a3d; --text: #ece8f4; --dim: #a39cb5; --accent: #f06ea0; --ok: #3ccf8e; --bad: #ff6b81; color-scheme: dark; }
 @media (prefers-color-scheme: light) { :root { --bg: #f6f4fa; --panel: #fff; --line: #e1dcea; --text: #1d1a26; --dim: #6b6480; color-scheme: light; } }
 * { box-sizing: border-box; }
 body { margin: 0; height: 100vh; display: grid; grid-template-columns: 260px 1fr; background: var(--bg); color: var(--text); font: 14px/1.5 "Segoe UI", "Leelawadee UI", system-ui, sans-serif; }
