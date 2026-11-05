@@ -166,7 +166,9 @@ function createComputer({native,decide,openApp,openSite,picture,system,verifyVis
         if(signal.aborted||job!==current)return;
         const before=await native.request({action:'read',window:0},signal);
         if(before.app.window!==view.app.window)throw new Error('หน้าต่างเปลี่ยนระหว่างรอ กรุณาเริ่มงานใหม่');
-        for(const t of [target,toTarget].filter(Boolean))if(!sameTarget(before.targets.find(f=>f.id===t.id),t))throw new Error('ปุ่มเปลี่ยนระหว่างวางแผน');
+        // the page moved on while she waited (a confirmation, a page still loading): the same button by name and role, else stop
+        const again=(key,t)=>{if(!t||sameTarget(before.targets.find(f=>f.id===t.id),t))return t;const moved=before.targets.find(f=>f.name&&f.name===t.name&&f.role===t.role);if(!moved)throw new Error('ปุ่มเปลี่ยนระหว่างวางแผน');a[key]=moved.id;return moved;};
+        target=again('target',target);toTarget=again('toTarget',toTarget);
         const step={tool:a.tool,label:a.reason,status:'running'};current.state.steps.push(step);emit(current,{message:a.reason});let receipt;
         if(a.tool==='cursor_position'){receipt=JSON.stringify(await native.request({action:'cursor'},signal));}
         else if(a.tool==='note'){if(!visibleText(view).includes(a.text.normalize('NFKC').replace(/\s/g,'')))throw new Error('บันทึกได้เฉพาะข้อความที่เห็นจริง');notes[a.name]=a.text;}

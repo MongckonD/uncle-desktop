@@ -63,3 +63,10 @@ test('the site list shared by chat and computer control', async () => {
   assert.equal(SITES.youtube, 'https://www.youtube.com');
   assert.equal(Object.hasOwn(SITES, 'constructor'), false);
 });
+
+test('Claude Code call syntax in a control step becomes the JSON the job reads', () => {
+  const { fromInvoke } = require('../src/main/llm');
+  const text = '<invoke name="click">\n<parameter name="target">12</parameter>\n<parameter name="reason">Play the song</parameter>\n</invoke>\n<invoke name="read">';
+  assert.deepEqual(JSON.parse(fromInvoke(text)), { tool: 'click', target: 12, reason: 'Play the song' });
+  assert.equal(fromInvoke('no call here'), '');
+});

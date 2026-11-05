@@ -147,7 +147,9 @@ function claudeChat(cfg, text, persona, onDelta, signal) {
   fs.writeFileSync(personaFile, persona);
   const args = ['-p', '--output-format', 'stream-json', '--verbose',
     '--permission-mode', CLAUDE_MODES.includes(cfg.claudeMode) ? cfg.claudeMode : 'default',
-    '--append-system-prompt-file', quote(personaFile)];
+    '--append-system-prompt-file', quote(personaFile),
+    // Sonnet: her answers are a few sentences, quicker and lighter on your plan than Opus
+    '--model', /^[a-z0-9.-]{1,40}$/.test(cfg.claudeModel || '') ? cfg.claudeModel : 'sonnet'];
   if (!claudeSession) claudeSession = randomUUID();
   args.push(claudeStarted ? '--resume' : '--session-id', claudeSession);
   return new Promise((resolve, reject) => {
@@ -198,6 +200,61 @@ function claudeChat(cfg, text, persona, onDelta, signal) {
   });
 }
 
+// One answer from Claude for a computer-control step: no tools, no hooks or MCP servers of yours, no
+// saved session, a picture of the screen if there is one. Sonnet by default: a job takes many steps.
+// <invoke name="focus"><parameter name="window">9</parameter>…</invoke>: the first call, as the JSON the job reads
+function fromInvoke(text) {
+  const call = /<invoke name="([a-z_]+)">([\s\S]*?)<\/invoke>/.exec(text);
+  if (!call) return '';
+  const action = { tool: call[1] };
+  for (const [, key, raw] of call[2].matchAll(/<parameter name="([A-Za-z_]+)">([\s\S]*?)<\/parameter>/g)) {
+    const value = raw.trim();
+    action[key] = /^-?\d+$/.test(value) ? Number(value) : value === 'true' ? true : value === 'false' ? false : value;
+  }
+  return JSON.stringify(action);
+}
+
+function claudeOnce({ system, text, image = null, model = 'sonnet' }, signal) {
+  const promptFile = path.join(os.tmpdir(), `capri-control-${randomUUID()}.txt`);
+  // it has no tools here, and its own call syntax would come back as text: one raw JSON object, said plainly
+  fs.writeFileSync(promptFile, `${system}
+
+Answer with the raw JSON object only: no function-call or XML syntax, no code fence, no words around it.`);
+  const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose',
+    '--system-prompt-file', quote(promptFile), '--tools', '""', '--setting-sources', 'local',
+    '--strict-mcp-config', '--no-session-persistence', '--model', model];
+  const content = [{ type: 'text', text }, ...(image ? [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } }] : [])];
+  return new Promise((resolve, reject) => {
+    const child = spawn(claudeBin(), args, { cwd: os.tmpdir(), shell: process.platform === 'win32', windowsHide: true });
+    const kill = () => (process.platform === 'win32' ? execFile('taskkill', ['/pid', String(child.pid), '/t', '/f'], () => {}) : child.kill());
+    signal?.addEventListener('abort', kill, { once: true });
+    let buffer = '', result = null, errors = '';
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      buffer += chunk;
+      for (let nl; (nl = buffer.indexOf('\n')) >= 0;) {
+        const line = buffer.slice(0, nl).trim(); buffer = buffer.slice(nl + 1);
+        try { const msg = JSON.parse(line); if (msg.type === 'result') result = msg; } catch { /* not a message */ }
+      }
+    });
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', (d) => { errors += d; });
+    child.on('error', (err) => reject(new Error(`Claude Code: ${err.message}`)));
+    child.on('close', () => {
+      fs.rm(promptFile, { force: true }, () => {});
+      signal?.removeEventListener('abort', kill);
+      if (signal?.aborted) return reject(new Error('หยุดแล้ว'));
+      if (!result || result.is_error) return reject(new Error(`Claude Code: ${(result?.result || errors || 'no answer').slice(0, 200)}`));
+      // a word or two around the JSON ("Here's the next step:"): the object alone
+      const text = String(result.result || ''), json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1) || fromInvoke(text);
+      if (!json) return reject(new Error(`Claude Code: ${text.slice(0, 200) || 'no answer'}`)); // what it said instead
+      resolve(json);
+    });
+    child.stdin.on('error', () => {});
+    child.stdin.end(JSON.stringify({ type: 'user', message: { role: 'user', content } }) + '\n');
+  });
+}
+
 function resetClaude() {
   claudeSession = null;
   claudeStarted = false;
@@ -229,4 +286,4 @@ function isLocal(id, cfg, model) {
   return Boolean(PROVIDERS[id].local);
 }
 
-module.exports = { isLocal, PROVIDERS, CLAUDE_MODES, models, warm, chat, resetClaude, isChatSession, claudeMemory, restoreClaude };
+module.exports = { isLocal, PROVIDERS, CLAUDE_MODES, models, warm, chat, claudeOnce, fromInvoke, resetClaude, isChatSession, claudeMemory, restoreClaude };
