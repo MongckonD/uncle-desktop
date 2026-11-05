@@ -265,6 +265,13 @@ export class Speech {
     } catch (error) { if (!s.cancelled) { s.cancelled = true; this.stopButton.hidden = true; this.failed(error); } }
   }
   // her whole answer: the rest of it said (or, with no stream, all of it)
+  // a short line she says out loud as well as in her bubble (her hello, a job's result): only with
+  // read-aloud on, never over something she's already saying, and quietly if the voice isn't there
+  announce(text) {
+    if (!this.settings.auto || this.muted || this.active || !speechText(text)) return;
+    if (/[฀-๿]/.test(text) && !/^th/i.test(this.settings.voice || '')) return; // an English voice doesn't read Thai
+    this.play(text).catch(() => {});
+  }
   reply(text) {
     const s = this.stream;
     if (s && !s.ended) { if (s.cancelled) s.ended = true; else this.pump(s, text, true); return; } // stopped mid-answer: the rest isn't read

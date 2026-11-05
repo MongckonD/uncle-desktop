@@ -355,6 +355,11 @@ async function boot() {
   // Talking to her (chat.js): "Talk to her" in her menu, or the button when you click her idle.
   const chat = new Chat({ capri, panel, voice, host: keepFocus, brain });
   let characterRequest = 0;
+  let spokenJob = null; // the computer job whose result she last said out loud
+  // "always English" (replyLang): what she says out loud for her Thai hello and job results
+  const english = () => brain.replyLang === 'en';
+  const englishHello = () => pick([`Hi boss, ${brain.character?.name || 'Rocky'} is here!`, 'Hey boss! Ready when you are.', 'Back on your desktop, boss!']);
+  const englishResult = (status) => status === 'done' ? pick(['Done, boss!', 'All done!', 'There you go, boss!']) : "Sorry boss, that didn't work.";
   const switchCharacter = async (character) => {
     const request = ++characterRequest;
     if (character.id === capri.character.id) return;
@@ -423,6 +428,7 @@ async function boot() {
     },
     onState:state=>{
       if(state.status==='done'&&!state.voice&&!state.remote&&!computerUI.open)panel.say({kind:'info',face:'laugh',line:state.message,hold:4000}); // no dialog to pop up for a job that worked
+      if(['done','error'].includes(state.status)&&!state.voice&&!state.remote&&state.id!==spokenJob){spokenJob=state.id;speechUI.announce(english()?englishResult(state.status):state.message);} // and she says how it went
       listeningUI.externalJob=state.voice&&['running','confirm'].includes(state.status);
       if(state.voice&&!['running','confirm'].includes(state.status)){
         listeningUI.clearConfirmation();listeningUI.followUntil=Date.now()+10000;
@@ -1191,7 +1197,11 @@ async function boot() {
   // first launch: her setup, step by step (settings.js); later, her welcome while Claude Code isn't plugged in
   if (!config.welcomed) settingsUI.show();
   else if (config.claude && !hooks.installed) guide.welcome();
-  else panel.say({ kind: 'info', line: brain.onlineLine(), hold: 4000 });
+  else {
+    const hello = brain.onlineLine();
+    panel.say({ kind: 'info', line: hello, hold: 4000 });
+    speechUI.announce(english() ? englishHello() : hello);
+  }
 
   // In the evening, after a real day's work, she brings you her report card once, on her own,
   // at a quiet moment.
