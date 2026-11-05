@@ -125,13 +125,18 @@ async function openaiChat(p, { model, messages }, onDelta, signal) {
 // only ever sees fixed arguments.
 
 const quote = (s) => (process.platform === 'win32' ? `"${s}"` : s); // cmd joins the arguments
+// `claude` on the PATH, else where its native installer puts it (~/.local/bin, often not on the PATH yet)
+function claudeBin() {
+  const native = path.join(os.homedir(), '.local', 'bin', process.platform === 'win32' ? 'claude.exe' : 'claude');
+  return fs.existsSync(native) ? quote(native) : 'claude';
+}
 // its session id, picked here so her hooks can tell its events from your other sessions' (main.js)
 let claudeSession = null;
 let claudeStarted = false; // each message after the first continues the same conversation
 
 function claudeVersion() {
   return new Promise((resolve, reject) => {
-    execFile('claude', ['--version'], { shell: process.platform === 'win32', timeout: 10000 }, (err, out) => (
+    execFile(claudeBin(), ['--version'], { shell: process.platform === 'win32', timeout: 10000 }, (err, out) => (
       err ? reject(new Error('Claude Code not found (is `claude` on your PATH?)')) : resolve(out.trim())));
   });
 }
@@ -146,7 +151,7 @@ function claudeChat(cfg, text, persona, onDelta, signal) {
   if (!claudeSession) claudeSession = randomUUID();
   args.push(claudeStarted ? '--resume' : '--session-id', claudeSession);
   return new Promise((resolve, reject) => {
-    const child = spawn('claude', args, {
+    const child = spawn(claudeBin(), args, {
       cwd: cfg.claudeCwd || os.homedir(),
       shell: process.platform === 'win32',
       windowsHide: true,
